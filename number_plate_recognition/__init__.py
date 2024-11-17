@@ -1,0 +1,1 @@
+from .NumberPlateRecognition import NumberPlateRecognition
