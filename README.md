@@ -11,9 +11,9 @@ This projects aims to create a program to make images and videos safe to upload 
 
 ## Conda Environment
 
-All the dependencies for this project are saved in the environments.yml file for a conda environment. Use 
+All the dependencies for this project are saved in the environment.yml file for a conda environment. Use 
 ```
-conda env create --name NumberPlateRecognition --file=environments.yml
+conda env create --name NumberPlateRecognition --file=environment.yml
 ``` 
 to create the conda environment. Use `ctrl+shift+p` and search for `python:Select Interpreter` to select the environment as interpreter in vs code.
 
