@@ -1,4 +1,4 @@
-from ui import UI_App
+from safe_video import UI_App
 
 if __name__ == '__main__':
     app = UI_App()

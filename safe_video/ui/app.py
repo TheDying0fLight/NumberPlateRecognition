@@ -1,6 +1,6 @@
 import flet as ft
 import shutil
-from number_plate_recognition import NumberPlateRecognition
+from safe_video.number_plate_recognition import NumberPlateRecognition
 
 class UI_App:
     def __init__(self):
@@ -13,7 +13,7 @@ class UI_App:
 
     def upload_callback(self, file_results:ft.FilePickerResultEvent):
         for file in file_results.files:
-            destination_path = f"uploads/{file.name}"
+            destination_path = f"safe_video/upload_cache/{file.name}"
             shutil.copy(file.path, destination_path)
             img = ft.Image(src=destination_path, width=100, height=100, fit=ft.ImageFit.CONTAIN)
             self.images.append(destination_path)
