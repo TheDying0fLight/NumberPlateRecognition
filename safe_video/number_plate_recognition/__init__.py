@@ -1,0 +1,1 @@
+from .plate_recognition import NumberPlateRecognition
