@@ -1,5 +1,6 @@
 import flet as ft
 import shutil
+import os
 from safe_video.number_plate_recognition import NumberPlateRecognition
 
 class UI_App:
@@ -13,10 +14,12 @@ class UI_App:
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         for file in file_results.files:
-            destination_path = f"safe_video/upload_cache/{file.name}"
-            shutil.copy(file.path, destination_path)
-            img = ft.Image(src=destination_path, width=100, height=100, fit=ft.ImageFit.CONTAIN)
-            self.images.append(destination_path)
+            destination_path = f"safe_video/upload_cache/"
+            if not os.path.exists(destination_path):
+                os.makedirs(destination_path)
+            shutil.copy(file.path, destination_path + file.name)
+            img = ft.Image(src=destination_path + file.name, width=100, height=100, fit=ft.ImageFit.CONTAIN)
+            self.images.append(destination_path + file.name)
             self.page.add(img)
 
     def build_page(self, page: ft.Page):
