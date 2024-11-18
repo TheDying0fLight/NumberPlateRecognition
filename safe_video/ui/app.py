@@ -11,7 +11,7 @@ class UI_App:
         npr = NumberPlateRecognition(self.images[-1])
         npr.blur_image()
 
-    def upload_callback(self, file_results:ft.FilePickerResultEvent):
+    def upload_callback(self, file_results: ft.FilePickerResultEvent):
         for file in file_results.files:
             destination_path = f"safe_video/upload_cache/{file.name}"
             shutil.copy(file.path, destination_path)
@@ -28,6 +28,7 @@ class UI_App:
                 ft.ElevatedButton("Insert file", on_click=lambda _: Mypick.pick_files()),
                 ft.ElevatedButton("Blur image", on_click=lambda _: self.blur_callback())
                 ])
-    )
+        )
+
     def run(self):
         ft.app(target=self.build_page)
