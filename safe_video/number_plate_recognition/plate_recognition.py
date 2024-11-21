@@ -1,5 +1,3 @@
-# from ultralytics import YOLO
-
 class NumberPlateRecognition():
 
     def __init__(self, file_path: str):
