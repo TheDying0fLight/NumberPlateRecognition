@@ -165,6 +165,5 @@ cython_debug/
 /safe_video/number_plate_recognition/Dataset
 /safe_video/number_plate_recognition/runs/detect
 /safe_video/number_plate_recognition/datasets
-*.pt
 /safe_video/number_plate_recognition/models
 /safe_video/number_plate_recognition/traindata
