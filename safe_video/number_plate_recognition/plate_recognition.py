@@ -20,7 +20,7 @@ class NumberPlateRecognition():
         model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.onnx")
         self.model = YOLO(model_path, task='detect')
 
-    def analyze(self, image) -> dict:
+    def analyze(self, image):
         result = self.model(image)[0]
         data: Boxes = result.boxes.cpu().numpy()
         return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
