@@ -22,9 +22,9 @@ class NumberPlateRecognition():
         self.model = YOLO(model_path, task='detect')
 
     def analyze(self, image):
-        result = self.model(image)[0]
-        data: Boxes = result.boxes.cpu().numpy()
-        return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
+        self.result = self.model(image)[0]
+        data: Boxes = self.result.boxes.cpu().numpy()
+        return DetectionResults(data.xyxy,data.conf,data.cls,self.result.names)
 
     def blur_image(self, image, bboxes):
         int_bboxes = bboxes.astype('int')
