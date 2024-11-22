@@ -15,6 +15,7 @@ class DetectionResults():
         for a,b in self.__dict__.items(): ret = f"{ret}{a}: {b}\n"
         return ret
 
+
 class NumberPlateRecognition():
     def __init__(self, file_path: str = "."):
         self.file_path = file_path
