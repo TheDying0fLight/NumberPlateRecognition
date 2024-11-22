@@ -18,7 +18,7 @@ class DetectionResults():
 class NumberPlateRecognition():
     def __init__(self, file_path: str = "."):
         self.file_path = file_path
-        model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.onnx")
+        model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt")
         self.model = YOLO(model_path, task='detect')
 
     def analyze(self, image):
@@ -28,6 +28,7 @@ class NumberPlateRecognition():
 
     def blur_image(self, image, bboxes):
         int_bboxes = bboxes.astype('int')
+        image = image.copy()
         for box in int_bboxes:
             cropped_img = image[box[1]:box[3], box[0]:box[2]]
             blurred_img = cv2.GaussianBlur(cropped_img, (25,25),0)
