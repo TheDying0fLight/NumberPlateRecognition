@@ -1,7 +1,13 @@
+from PIL import Image
+from pathlib import Path
+from typing import Dict, List, Union
+
 import os
 from ultralytics import YOLO
 from ultralytics.engine.results import Boxes
 import cv2
+import numpy as np
+import torch
 
 class DetectionResults():
     def __init__(self, boxes, conf, cls, classlegend):
@@ -22,10 +28,11 @@ class NumberPlateRecognition():
         model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt")
         self.model = YOLO(model_path, task='detect')
 
-    def analyze(self, image):
-        self.result = self.model(image)[0]
-        data: Boxes = self.result.boxes.cpu().numpy()
-        return DetectionResults(data.xyxy,data.conf,data.cls,self.result.names)
+    def analyze(self,
+                image: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor]) -> DetectionResults:
+        result = self.model(image)[0]
+        data: Boxes = result.boxes.cpu().numpy()
+        return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
 
     def blur_image(self, image, bboxes):
         int_bboxes = bboxes.astype('int')
@@ -38,3 +45,4 @@ class NumberPlateRecognition():
             y_end = y_offset + blurred_img.shape[0]
             image[y_offset:y_end, x_offset:x_end] = blurred_img
         return image
+
