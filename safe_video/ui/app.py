@@ -1,15 +1,14 @@
 import flet as ft
 import shutil
 from typing import Dict
-from typing import Dict
 import os
 from safe_video.number_plate_recognition import NumberPlateRecognition
-from .dataclasses import Video, Image, ColorPalate
+from .dataclasses import Video, Image, ColorPalette
 from .components import PreviewImage
 
 CACHE_PATH = "safe_video/upload_cache/"
 
-DarkColors = ColorPalate(
+DarkColors = ColorPalette(
     normal = "#1a1e26",
     light = "#232833",
     dark = "#101217",
@@ -20,7 +19,7 @@ class UI_App:
         self.images: dict[Image] = {}
         self.cache_path = f"safe_video/upload_cache/"
         self.page: ft.Page = None
-        self.colors: ColorPalate = DarkColors
+        self.colors: ColorPalette = DarkColors
         self.image_ref = ft.Ref[ft.Row]()
         self.preview_bar_ref = ft.Ref[ft.Column]()
         self.current_image_key: str
@@ -32,21 +31,21 @@ class UI_App:
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
         for file in file_results.files:
-            path =self.cache_path + file.name
+            path = self.cache_path + file.name
             if not os.path.exists(self.cache_path):
                 os.makedirs(self.cache_path)
             shutil.copy(file.path, path)
             [name, format] = file.name.split(".", 1)
             self.images[name] = Image(cache_path=self.cache_path, original_path=file.path, name=name, format=format)
             self.current_image = name
-            
+
             self.preview_bar_ref.current.controls.append(PreviewImage(name, path, self.switch_image))
             self.preview_bar_ref.current.update()
 
         self.current_image_key = name
         self.image_ref.current.controls = [ft.Container(image_src=path, image_fit=ft.ImageFit.CONTAIN, expand=True, margin=10)]
         self.image_ref.current.update()
-    
+
     def switch_image(self, info: ft.ControlEvent):
         self.current_image_key = info.control.key
         img = self.images[self.current_image_key]
@@ -68,8 +67,8 @@ class UI_App:
 
     def build_page(self, page: ft.Page):
         self.page = page
-        page.padding=0
-        page.spacing=0
+        page.padding = 0
+        page.spacing = 0
         page.bgcolor = self.colors.light
         file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         file_picker_export = ft.FilePicker(on_result=self.export_callback)
@@ -102,7 +101,6 @@ class UI_App:
                         ),
                 ], expand=True), bgcolor=self.colors.normal, width=300, expand=0.5, alignment=ft.alignment.top_left),
             ], expand=True),
-              
         )
         self.image_ref.current.update()
         self.preview_bar_ref.current.update()

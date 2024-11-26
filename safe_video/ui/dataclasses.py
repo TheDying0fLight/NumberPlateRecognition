@@ -17,8 +17,9 @@ class Image:
     def get_path(self):
         return self.cache_path + self.name + '.' + self.format
 
+
 @dataclass
-class ColorPalate:
+class ColorPalette:
     normal: str
     light: str
     dark: str

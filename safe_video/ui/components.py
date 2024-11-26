@@ -10,7 +10,6 @@ class PreviewImage(ft.Container):
             width=50,
             height=50,
             on_click=callback,
-            image_fit=ft.ImageFit.FILL,
-            border_radius=3, 
-            image_opacity=0.8
+            image_fit=ft.ImageFit.COVER,
+            border_radius=10,
         )
