@@ -1,6 +1,7 @@
 import flet as ft
 import shutil
 from typing import Dict
+from typing import Dict
 import os
 from safe_video.number_plate_recognition import NumberPlateRecognition
 from .dataclasses import Video, Image, ColorPalate
@@ -108,5 +109,3 @@ class UI_App:
 
     def run(self):
         ft.app(target=self.build_page)
-
-
