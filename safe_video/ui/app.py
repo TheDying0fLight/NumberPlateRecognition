@@ -63,7 +63,7 @@ class UI_App:
             export_path += '.' + img.format
         shutil.move(img.get_path(), export_path)
 
-    def settings_callback(self):
+    def settings_callback(self, info: ft.ControlEvent):
         print('TODO: Settings')
 
     def build_page(self, page: ft.Page):
@@ -82,7 +82,7 @@ class UI_App:
                 ft.ElevatedButton("Export file", on_click=lambda _: file_picker_export.save_file(file_name=self.images[self.current_image_key].name), icon=ft.icons.SAVE_ALT),
                 ft.ElevatedButton("Blur all", on_click=lambda _: self.blur_callback(), icon=ft.icons.PLAY_ARROW),
                 ft.Row([], expand=True),
-                ft.IconButton(on_click=lambda _: self.blur_callback(), icon=ft.icons.SETTINGS)
+                ft.IconButton(on_click=self.settings_callback, icon=ft.icons.SETTINGS)
             ]), padding=10, bgcolor=self.colors.dark),
             ft.Row([
                 ft.Container(ft.Column([], expand=True, spacing=10, ref=self.preview_bar_ref), bgcolor=self.colors.normal, padding=10, width=70),
