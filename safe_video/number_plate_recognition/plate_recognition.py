@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 
 import os
 from ultralytics import YOLO
-from ultralytics.engine.results import Boxes
+from ultralytics.engine.results import Boxes, Results
 import numpy as np
 import torch
 
@@ -20,6 +20,7 @@ class DetectionResults():
         for a,b in self.__dict__.items(): ret = f"{ret}{a}: {b}\n"
         return ret
 
+
 class NumberPlateRecognition():
     def __init__(self):
         model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.onnx")
@@ -33,3 +34,10 @@ class NumberPlateRecognition():
 
     def blur_image(self):
         raise NotImplementedError("TODO")
+
+    def filtered_model(self, image, filters = None):
+        results = self.model(image)
+        # for filter in filters:
+        #     if 
+        for result in results:
+            result.show()
