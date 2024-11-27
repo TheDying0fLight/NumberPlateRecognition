@@ -26,12 +26,21 @@ To update your conda environment with the new file use:
 conda env update --file environment.yml --prune
 ```
 
-## Resources
+# Resources
 
-### Dataset Lists
+## Datasets
 - [UltralyticsYOLODocs](https://docs.ultralytics.com/datasets/detect/#usage)
 - [PapersWithCode](https://paperswithcode.com/datasets?task=object-detection&mod=images&page=1)
 - [Kaggle](https://www.kaggle.com/datasets?tags=13207-Computer+Vision)
 
-### Datasets
+### Specific Topics
+#### Faces
 - [Face-Detection-Dataset](https://www.kaggle.com/datasets/fareselmenshawii/face-detection-dataset)
+- <https://universe.roboflow.com/browse/person/face>
+
+#### Number Plates
+- <https://universe.roboflow.com/roboflow-universe-projects/license-plate-recognition-rxg4e/dataset/4>
+- <https://universe.roboflow.com/browse/transportation/anpr>
+
+#### Numbers
+- <https://universe.roboflow.com/browse/numbers>
