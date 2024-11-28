@@ -20,8 +20,8 @@ class UI_App:
         self.file_manager = FileManger(CACHE_PATH)
         self.page: ft.Page = None
         self.colors: ColorPalette = DarkColors
-        self.image_ref = ft.Ref[ft.Container]()
-        self.preview_bar_ref = ft.Ref[ft.Column]()
+        self.image_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
+        self.preview_bar = ft.Column([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
         self.npr = NumberPlateRecognition()
@@ -44,7 +44,7 @@ class UI_App:
         for name in names:
             img = self.file_manager[name]
             img.preview_ref = PreviewImage(img.name, img.get_path(), self.switch_image_callback)
-            self.preview_bar_ref.current.controls.append(img.preview_ref)
+            self.preview_bar.controls.append(img.preview_ref)
         self.switch_image(names[-1])
         self.page.update()
 
@@ -54,12 +54,12 @@ class UI_App:
             self.file_manager[self.selected_img].selected(False)
         if name not in self.file_manager: # image was probably deleted
             self.selected_img = None
-            self.image_ref.current.content = None
+            self.image_container.content = None
         else:
             self.selected_img = name
             img = self.file_manager[name]
             img.selected(True)
-            self.image_ref.current.content = ft.Image(img.get_path(), fit=ft.ImageFit.CONTAIN)
+            self.image_container.content = ft.Image(img.get_path(), fit=ft.ImageFit.CONTAIN)
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
@@ -74,7 +74,7 @@ class UI_App:
             self.close_image(img.name)
 
     def close_image(self, name):
-        self.preview_bar_ref.current.controls = [c for c in self.preview_bar_ref.current.controls if c.key != name]
+        self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
         self.selected_img = None
         del self.file_manager[name]
         self.switch_image(list(self.file_manager.keys())[0] if len(self.file_manager) >= 1 else '')
@@ -113,8 +113,8 @@ class UI_App:
                 ft.IconButton(on_click=self.settings_callback, icon=ft.icons.SETTINGS)
             ]), padding=10, bgcolor=self.colors.dark),
             ft.Row([
-                ft.Container(ft.Column([], expand=True, spacing=10, ref=self.preview_bar_ref), bgcolor=self.colors.normal, padding=10, width=70),
-                ft.Container(ref=self.image_ref, expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10),
+                ft.Container(self.preview_bar, bgcolor=self.colors.normal, padding=10, width=70),
+                self.image_container,
                 ft.Container(ft.Column([
                     ft.ExpansionTile(
                         title=ft.Text("Number Plates"),
@@ -131,8 +131,6 @@ class UI_App:
                 ], expand=True), bgcolor=self.colors.normal, width=300, expand=0.5, alignment=ft.alignment.top_left),
             ], expand=True),
         )
-        self.image_ref.current.update()
-        self.preview_bar_ref.current.update()
         names = self.file_manager.load_cached()
         self.load_images(names)
 
