@@ -61,7 +61,6 @@ class NumberPlateRecognition():
         # image = image[:, :, ::-1]
         
         car_class_id = 2 # maybe switch to searching algo to find car == 2 if the library changes the class id
-        #xyxy,conf,cls,name = self.analyze_car(image)
         data = self.analyze_car(image)
         car_boxes_coordinates = data.boxes[data.cls == car_class_id]
         car_boxes_conf = data.conf[data.cls == car_class_id]
@@ -94,7 +93,6 @@ class NumberPlateRecognition():
         store_box = store_box[store_conf > self.conf_interval]
         store_conf = store_conf[store_conf > self.conf_interval]
         
-        # TODO
-        # store_box contains the coordinates of the plates which needs to be blurred for example
-        # result = self.blur_image(image, store_box)
+        
+        # output store_box contains the coordinates of the plates which needs to be blurred
         return store_box, store_conf
