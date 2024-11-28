@@ -4,17 +4,19 @@ from typing import Dict, List, Union
 
 import os
 from ultralytics import YOLO
-from ultralytics.engine.results import Boxes
 import cv2
+from ultralytics.engine.results import Boxes, Results
 import numpy as np
 import torch
+from dataclasses import dataclass
+from typing import Any
 
-class DetectionResults():
-    def __init__(self, boxes, conf, cls, classlegend):
-        self.boxes = boxes
-        self.conf = conf
-        self.cls = cls
-        self.clslgd = classlegend
+@dataclass
+class DetectionResults:
+    boxes:  np.ndarray[Any, Any]
+    conf:   np.ndarray[Any, Any]
+    cls:    np.ndarray[Any, Any]
+    clslgd: dict[int, str]
 
     def __str__(self):
         ret = ""
@@ -34,7 +36,7 @@ class NumberPlateRecognition():
 
     def analyze(self,
                 image: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor]) -> DetectionResults:
-        result = self.model(image)[0]
+        result: Results = self.model(image)[0]
         data: Boxes = result.boxes.cpu().numpy()
         return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
     
