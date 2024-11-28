@@ -27,10 +27,19 @@ class NumberPlateRecognition():
         self.file_path = file_path
         model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt")
         self.model = YOLO(model_path, task='detect')
+        yolo_model_path = os.path.join(os.path.abspath("."), "models", "yolo11n.pt")
+        self.yolo_model = YOLO(yolo_model_path, task='detect')
+        self.conf_interval = 0.5
+
 
     def analyze(self,
                 image: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor]) -> DetectionResults:
         result = self.model(image)[0]
+        data: Boxes = result.boxes.cpu().numpy()
+        return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
+    
+    def analyze_car(self, image: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor]) -> DetectionResults:
+        result = self.yolo_model(image)[0]
         data: Boxes = result.boxes.cpu().numpy()
         return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
 
@@ -45,4 +54,47 @@ class NumberPlateRecognition():
             y_end = y_offset + blurred_img.shape[0]
             image[y_offset:y_end, x_offset:x_end] = blurred_img
         return image
+    
+    def detect_plate(self,image):
+        # TODO: kommt das Bild schon so 
+        # image = cv2.imread("example.jpg")
+        # image = image[:, :, ::-1]
+        
+        car_class_id = 2 # maybe switch to searching algo to find car == 2 if the library changes the class id
+        #xyxy,conf,cls,name = self.analyze_car(image)
+        data = self.analyze_car(image)
+        car_boxes_coordinates = data.boxes[data.cls == car_class_id]
+        car_boxes_conf = data.conf[data.cls == car_class_id]
+        
+        number_of_cars = len(car_boxes_coordinates)
+        store_box = np.zeros((number_of_cars, 4))
+        store_conf = np.zeros((number_of_cars,))
+        current_index = 0
 
+        for i in range(number_of_cars):
+            x1, y1, x2, y2 = map(int, car_boxes_coordinates[i])
+            cropped_image = image[y1:y2, x1:x2]
+
+            # looking for plates
+            plate_rec = self.analyze(cropped_image)
+
+            num_plates = len(plate_rec.boxes)
+            if num_plates > 0:
+                # transform back to original coordinates
+                transformed_boxes =  np.array(plate_rec.boxes) + [x1, y1, x1, y1]
+                transformed_conf = np.array(plate_rec.conf)
+                
+                store_box[current_index:current_index + num_plates] = transformed_boxes
+                store_conf[current_index:current_index + num_plates] = transformed_conf
+                current_index += num_plates
+        
+        store_box = store_box[:current_index]
+        store_conf = store_conf[:current_index]
+        
+        store_box = store_box[store_conf > self.conf_interval]
+        store_conf = store_conf[store_conf > self.conf_interval]
+        
+        # TODO
+        # store_box contains the coordinates of the plates which needs to be blurred for example
+        # result = self.blur_image(image, store_box)
+        return store_box, store_conf
