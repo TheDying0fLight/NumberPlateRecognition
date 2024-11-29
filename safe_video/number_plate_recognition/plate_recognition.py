@@ -80,13 +80,10 @@ class NumberPlateRecognition():
                 transformed_boxes =  np.array(plate_rec.boxes) + [x1, y1, x1, y1]
                 transformed_conf = np.array(plate_rec.conf)
 
+                transformed_boxes = transformed_boxes[transformed_conf > self.conf_interval]
+                transformed_conf = transformed_conf[transformed_conf > self.conf_interval]
                 store_box.extend(transformed_boxes)
                 store_conf.extend(transformed_conf)
 
-        store_box = np.array(store_box)
-        store_conf = np.array(store_conf)
-        store_box = store_box[store_conf > self.conf_interval]
-        store_conf = store_conf[store_conf > self.conf_interval]
-
         # output store_box contains the coordinates of the plates which needs to be blurred
-        return DetectionResults(store_box, store_conf, None, None)
+        return DetectionResults(np.array(store_box), np.array(store_conf), None, None)
