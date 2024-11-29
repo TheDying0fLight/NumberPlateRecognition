@@ -28,6 +28,7 @@ class Image:
         if self.preview_ref is None: return
         self.preview_ref.toggle_selected(selected)
 
+
 @dataclass
 class ColorPalette:
     normal: str
