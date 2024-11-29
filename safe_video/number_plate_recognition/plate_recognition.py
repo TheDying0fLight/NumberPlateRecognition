@@ -43,50 +43,48 @@ class NumberPlateRecognition():
         data = result.boxes.cpu().numpy()
         return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
 
-    def blur_image(self, image: Img, bboxes: Boxes):
-        int_bboxes = bboxes.astype('int')
+    def blur_image(self, image: Img, boxes: np.ndarray[Boxes]):
         image = image.copy()
-        for box in int_bboxes:
-            cropped_img = image[box[1]:box[3], box[0]:box[2]]
+        for box in boxes:
+            cropped_img = self.crop_image(image, box)
             blurred_img = cv2.GaussianBlur(cropped_img, (25,25),0)
-            x_offset, y_offset = box[0], box[1]
-            x_end = x_offset + blurred_img.shape[1]
-            y_end = y_offset + blurred_img.shape[0]
-            image[y_offset:y_end, x_offset:x_end] = blurred_img
+            x1,y1,x2,y2 = box.astype("int")
+            image[y1:y2,x1:x2] = blurred_img
         return image
 
-    def chained_detection(self, image: Img, cls: str, first_conf_thresh: float = 0) -> DetectionResults:
+    def crop_image(self, image: Img, xyxy: np.ndarray):
+        assert len(xyxy) == 4, "Array must have exactly 4 entries"
+        x1,y1,x2,y2 = xyxy.astype("int")
+        return image[y1:y2,x1:x2]
+
+    def chained_detection(self, image: Img, cls: str) -> DetectionResults:
         data = self.analyze(image, self.yolo_model)
         car_class_id = data.get_key(cls)
         car_boxes_coordinates = data.boxes[data.cls == car_class_id]
         car_boxes_conf = data.conf[data.cls == car_class_id]
 
-        number_of_cars = len(car_boxes_coordinates)
-        store_box = np.zeros((number_of_cars, 4))
-        store_conf = np.zeros((number_of_cars,))
-        current_index = 0
+        store_box = []
+        store_conf = []
 
-        for i in range(number_of_cars):
-            if car_boxes_conf[i] < first_conf_thresh: continue
-            x1, y1, x2, y2 = map(int, car_boxes_coordinates[i])
-            cropped_image = image[y1:y2, x1:x2]
+        for box,conf in zip(car_boxes_coordinates,car_boxes_conf):
+            if conf < self.conf_interval: continue
+            x1,y1,_,_ =  box.astype("int")
+            cropped_image = self.crop_image(image, box)
 
             # looking for plates
             plate_rec = self.analyze(cropped_image, self.plate_model)
-
             num_plates = len(plate_rec.boxes)
+
             if num_plates > 0:
                 # transform back to original coordinates
                 transformed_boxes =  np.array(plate_rec.boxes) + [x1, y1, x1, y1]
                 transformed_conf = np.array(plate_rec.conf)
 
-                store_box[current_index:current_index + num_plates] = transformed_boxes
-                store_conf[current_index:current_index + num_plates] = transformed_conf
-                current_index += num_plates
+                store_box.extend(transformed_boxes)
+                store_conf.extend(transformed_conf)
 
-        store_box = store_box[:current_index]
-        store_conf = store_conf[:current_index]
-
+        store_box = np.array(store_box)
+        store_conf = np.array(store_conf)
         store_box = store_box[store_conf > self.conf_interval]
         store_conf = store_conf[store_conf > self.conf_interval]
 
