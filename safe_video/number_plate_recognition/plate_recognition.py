@@ -33,7 +33,6 @@ class NumberPlateRecognition():
         self.yolo_model = YOLO(yolo_model_path, task='detect')
         self.conf_interval = 0.5
 
-
     def analyze(self,
                 image: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor]) -> DetectionResults:
         result: Results = self.model(image)[0]
