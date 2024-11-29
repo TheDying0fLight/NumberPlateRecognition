@@ -15,7 +15,7 @@ class Image:
     name: str
     format: str
     saved: bool = False
-    closed: bool = False
+    has_to_be_closed: bool = False
     preview_ref: PreviewImage = None
 
     def get_path(self):

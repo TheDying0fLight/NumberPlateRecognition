@@ -1,7 +1,4 @@
 import flet as ft
-import shutil
-from typing import Dict
-import os
 from safe_video.number_plate_recognition import NumberPlateRecognition
 from .dataclasses import Video, Image, ColorPalette
 from .components import PreviewImage, AlertSaveWindow
@@ -70,7 +67,7 @@ class UI_App:
         if file_results.path is None: return
         img = self.file_manager[self.selected_img]
         self.file_manager.export_image(img.name, file_results.path)
-        if img.closed:
+        if img.has_to_be_closed:
             self.close_image(img.name)
 
     def close_image(self, name):
@@ -82,12 +79,14 @@ class UI_App:
     def close_callback(self, info: ft.ControlEvent):
         if self.selected_img is None: return
         img = self.file_manager[self.selected_img]
-        img.closed = True
+        def save_callback():
+            self.file_picker_export.save_file(file_name=img.orig_name)
+            img.has_to_be_closed = True
         if img.saved:
             self.close_image(img.name)
         else:
             self.page.open(AlertSaveWindow(
-                save_callback=lambda: self.file_picker_export.save_file(file_name=img.orig_name),
+                save_callback=save_callback,
                 close_callback=lambda: self.close_image(img.name)
             ))
 
