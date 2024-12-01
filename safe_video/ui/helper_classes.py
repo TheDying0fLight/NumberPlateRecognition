@@ -1,12 +1,16 @@
 import os
 import shutil
 import re
+import PIL
+import PIL.Image
 
 from .dataclasses import Image
 
 class FileManger(dict[str, Image]):
     def __init__(self, cache_path: str):
         self.cache_path = cache_path
+        self.ORIGINAL_NAME = 'original'
+        self.PREVIEW_NAME = 'preview'
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
         super().__init__()
@@ -17,14 +21,31 @@ class FileManger(dict[str, Image]):
         Returns:
             list[str]: List of the keys of the inserted files
         """
-        names = []
-        for filename in os.listdir(self.cache_path):
-            name, counter, fmt = re.findall("(.*)_(\d)+\.(.*)$", filename)[0]
-            path_name = name + '_' + counter
-            if path_name not in self:
-                self.__setitem__(path_name, Image(cache_path=self.cache_path, name=path_name, orig_name=name, format=fmt))
-                names.append(path_name)
-        return names
+        ids = []
+        for directory in os.listdir(self.cache_path):
+            dir_path = f'{self.cache_path}/{directory}'
+            if not os.path.isdir(dir_path): continue
+            name, counter = re.findall("(.*)_(\d)+$", directory)[0]
+            orig_fmt, preview_fmt = '', ''
+            for file in os.listdir(dir_path):
+                file_name, fmt = re.findall("(.*)\.(.*)$", file)[0]
+                if file_name == self.ORIGINAL_NAME:
+                    orig_fmt = fmt
+                elif file_name == self.PREVIEW_NAME:
+                    preview_fmt = fmt
+                else:
+                    print(f'Found unespected file {file} in directory {directory} in cache. TODO: Handle this')
+            if orig_fmt != '' and preview_fmt != '' and directory not in self:
+                self.__setitem__(directory, Image(
+                    id=directory,
+                    cache_path=self.cache_path,
+                    name=name,
+                    orig_file=self.ORIGINAL_NAME,
+                    orig_fmt=orig_fmt,
+                    preview_file=self.PREVIEW_NAME,
+                    preview_fmt=preview_fmt))
+                ids.append(directory)
+        return ids
 
     def upload_image(self, old_path: str, filename: str) -> str:
         """Uploads the image and inserts it into the dictionary
@@ -36,23 +57,34 @@ class FileManger(dict[str, Image]):
             str: returns the key where the image can be found
         """
         name, fmt = re.findall("(.*)\.(.*)$", filename)[0]
-        new_path = self.cache_path + name + "{}." + fmt
-        if not os.path.exists(self.cache_path):
+        if not os.path.exists(self.cache_path): # check if cache folder exists
             os.makedirs(self.cache_path)
         counter = 0
-        new_path = str(self.cache_path + name + "_{}." + fmt)
-        while os.path.isfile(new_path.format(counter)):
+        new_folder = str(self.cache_path + name + "_{}")
+        while os.path.isdir(new_folder.format(counter)):
             counter += 1
-        shutil.copy(old_path, new_path.format(counter))
-        path_name = name + '_' + str(counter)
-        self.__setitem__(path_name, Image(cache_path=self.cache_path, name=path_name, orig_name=name, format=fmt))
-        return path_name
+        id = f'{name}_{counter}' # unique id for this image
+        os.makedirs(new_folder.format(counter))
+        new_path = f'{new_folder.format(counter)}/{self.ORIGINAL_NAME}.{fmt}'
+        shutil.copy(old_path, new_path)
+        img = PIL.Image.open(new_path)
+        img = img.resize((100, 100))
+        img.save(f'{new_folder.format(counter)}/{self.PREVIEW_NAME}.jpg', optimize=True, quality=50)
+        self.__setitem__(id, Image(
+            id=id,
+            cache_path=self.cache_path,
+            name=name,
+            orig_file=self.ORIGINAL_NAME,
+            orig_fmt=fmt,
+            preview_file=self.PREVIEW_NAME,
+            preview_fmt='jpg'))
+        return id
 
     def export_image(self, name: str, export_path: str):
         img = self.__getitem__(name)
         if '.' not in export_path:
-            export_path += '.' + img.format
-        shutil.copy(img.get_path(), export_path)
+            export_path += '.' + img.orig_fmt
+        shutil.copy(img.get_path_orig(), export_path)
         img.saved = True
 
     def __delitem__(self, name: str):

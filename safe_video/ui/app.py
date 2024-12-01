@@ -40,23 +40,23 @@ class UI_App:
         if len(names) == 0: return
         for name in names:
             img = self.file_manager[name]
-            img.preview_ref = PreviewImage(img.name, img.get_path(), self.switch_image_callback)
-            self.preview_bar.controls.append(img.preview_ref)
+            img.preview_container = PreviewImage(img.id, img.get_path_preview(), self.switch_image_callback)
+            self.preview_bar.controls.append(img.preview_container)
         self.switch_image(names[-1])
         self.page.update()
 
-    def switch_image(self, name):
+    def switch_image(self, id: str):
         if self.selected_img is not None:
-            if name == self.selected_img: return
+            if id == self.selected_img: return
             self.file_manager[self.selected_img].selected(False)
-        if name not in self.file_manager: # image was probably deleted
+        if id not in self.file_manager: # image was probably deleted
             self.selected_img = None
             self.image_container.content = None
         else:
-            self.selected_img = name
-            img = self.file_manager[name]
+            self.selected_img = id
+            img = self.file_manager[id]
             img.selected(True)
-            self.image_container.content = ft.Image(img.get_path(), fit=ft.ImageFit.CONTAIN)
+            self.image_container.content = ft.Image(img.get_path_orig(), fit=ft.ImageFit.CONTAIN)
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
@@ -80,7 +80,7 @@ class UI_App:
         if self.selected_img is None: return
         img = self.file_manager[self.selected_img]
         def save_callback():
-            self.file_picker_export.save_file(file_name=img.orig_name)
+            self.file_picker_export.save_file(file_name=img.get_orig_name())
             img.has_to_be_closed = True
         if img.saved:
             self.close_image(img.name)
