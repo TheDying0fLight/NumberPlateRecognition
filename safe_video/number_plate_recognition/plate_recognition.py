@@ -50,6 +50,9 @@ class NumberPlateRecognition():
             blurred_img = cv2.GaussianBlur(cropped_img, (25,25),0)
             x1,y1,x2,y2 = box.astype("int")
             image[y1:y2,x1:x2] = blurred_img
+            
+            # TODO Delete later
+            cv2.rectangle(image, (x1,y1), (x2,y2), (0,0,255), 4)
         return image
 
     def crop_image(self, image: Img, xyxy: np.ndarray):
