@@ -56,7 +56,7 @@ class UI_App:
             self.selected_img = id
             img = self.file_manager[id]
             img.selected(True)
-            self.image_container.content = ft.Image(img.get_path_orig(), fit=ft.ImageFit.CONTAIN)
+            self.image_container.content = ft.Image(img.get_path_preview(), fit=ft.ImageFit.CONTAIN)
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
