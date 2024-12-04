@@ -30,19 +30,19 @@ class UI_App:
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
-        images = []
+        ids = []
         for file in file_results.files:
-            name = self.file_manager.upload_image(old_path=file.path, filename=file.name)
-            images.append(name)
-        self.load_images(images)
+            id = self.file_manager.upload_media(old_path=file.path, filename=file.name)
+            if id is not None: ids.append(id)
+        self.load_images(ids)
 
-    def load_images(self, names: list[str]):
-        if len(names) == 0: return
-        for name in names:
-            img = self.file_manager[name]
+    def load_images(self, ids: list[str]):
+        if len(ids) == 0: return
+        for id in ids:
+            img = self.file_manager[id]
             img.preview_container = PreviewImage(img.id, img.get_path_preview(), self.switch_image_callback)
             self.preview_bar.controls.append(img.preview_container)
-        self.switch_image(names[-1])
+        self.switch_image(ids[-1])
         self.page.update()
 
     def switch_image(self, id: str):
@@ -104,7 +104,7 @@ class UI_App:
         page.add(
             ft.Container(ft.Row([
                 ft.Container(content=ft.IconButton(ft.icons.BLUR_ON, focus_color=self.colors.dark), width=50),
-                ft.ElevatedButton("Open Image", on_click=lambda _: self.file_picker_open.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
+                ft.ElevatedButton("Open Image", on_click=lambda _: self.file_picker_open.pick_files(file_type=ft.FilePickerFileType.MEDIA, allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
                 ft.ElevatedButton("Export file", on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_img].get_orig_name()), icon=ft.icons.SAVE_ALT),
                 ft.ElevatedButton("Close file", on_click=self.close_callback, icon=ft.icons.DELETE),
                 ft.ElevatedButton("Blur all", on_click=lambda _: self.blur_callback(), icon=ft.icons.PLAY_ARROW),

@@ -2,14 +2,7 @@ from dataclasses import dataclass
 from .components import PreviewImage
 
 @dataclass
-class Video:
-    cache_path: str
-    original_path: str
-    name: str
-
-
-@dataclass
-class Image:
+class Media:
     id: str # name + number to make it unique
     cache_path: str
     name: str
@@ -33,6 +26,16 @@ class Image:
     def selected(self, selected: bool):
         if self.preview_container is None: return
         self.preview_container.toggle_selected(selected)
+
+
+class Image(Media):
+    def __init__(self, media: Media):
+        super().__init__(*media.__dict__.values())
+
+
+class Video(Media):
+    def __init__(self, media: Media):
+        super().__init__(*media.__dict__.values())
 
 
 @dataclass

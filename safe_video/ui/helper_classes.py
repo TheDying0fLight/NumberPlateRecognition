@@ -2,8 +2,9 @@ import os
 import shutil
 import re
 import PIL
+import cv2
 
-from .dataclasses import Image
+from .dataclasses import Image, Video, Media
 
 class FileManger(dict[str, Image]):
     def __init__(self, cache_path: str):
@@ -12,6 +13,8 @@ class FileManger(dict[str, Image]):
         self.PREVIEW_NAME = 'preview'
         self.PREVIEW_FMT = 'webp'
         self.PREVIEW_MAX_SIZE = 1000
+        self.IMAGE_FMTS = ['png', 'jpg']
+        self.VIDEO_FMTS = ['mp4']
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
         super().__init__()
@@ -37,18 +40,22 @@ class FileManger(dict[str, Image]):
                 else:
                     print(f'Found unexpected file {file} in directory {directory} in cache. TODO: Handle this')
             if orig_fmt != '' and preview_fmt != '' and directory not in self:
-                self.__setitem__(directory, Image(
+                media = Media(
                     id=directory,
                     cache_path=self.cache_path,
                     name=name,
                     orig_file=self.ORIGINAL_NAME,
                     orig_fmt=orig_fmt,
                     preview_file=self.PREVIEW_NAME,
-                    preview_fmt=preview_fmt))
+                    preview_fmt=preview_fmt)
                 ids.append(directory)
+                if orig_fmt in self.IMAGE_FMTS:
+                    self.__setitem__(directory, Image(media))
+                if orig_fmt in self.VIDEO_FMTS:
+                    self.__setitem__(directory, Video(media))
         return ids
 
-    def upload_image(self, old_path: str, filename: str) -> str:
+    def upload_media(self, old_path: str, filename: str) -> str:
         """Uploads the image and inserts it into the dictionary
 
         Args:
@@ -68,24 +75,45 @@ class FileManger(dict[str, Image]):
         os.makedirs(new_folder.format(counter))
         new_path = f'{new_folder.format(counter)}/{self.ORIGINAL_NAME}.{fmt}'
         shutil.copy(old_path, new_path)
-        self.__create_preview(new_path, f'{new_folder.format(counter)}/{self.PREVIEW_NAME}.{self.PREVIEW_FMT}')
-        self.__setitem__(id, Image(
+        media = Media(
             id=id,
             cache_path=self.cache_path,
             name=name,
             orig_file=self.ORIGINAL_NAME,
             orig_fmt=fmt,
             preview_file=self.PREVIEW_NAME,
-            preview_fmt=self.PREVIEW_FMT))
+            preview_fmt=self.PREVIEW_FMT)
+        if fmt in self.IMAGE_FMTS:
+            self.__create_preview_from_image(new_path, f'{new_folder.format(counter)}/{self.PREVIEW_NAME}.{self.PREVIEW_FMT}')
+            self.__setitem__(id, Image(media))
+        elif fmt in self.VIDEO_FMTS:
+            self.__create_preview_from_video(new_path, f'{new_folder.format(counter)}/{self.PREVIEW_NAME}.{self.PREVIEW_FMT}')
+            self.__setitem__(id, Video(media))
         return id
 
 
-    def __create_preview(self, orig_path: str, preview_path: str):
+    def __create_preview_from_image(self, orig_path: str, preview_path: str):
         img = PIL.Image.open(orig_path)
         width, height = img.size
         if max(width, height) > self.PREVIEW_MAX_SIZE:
             scale = self.PREVIEW_MAX_SIZE/max(width, height)
             img = img.resize((int(width*scale), int(height*scale)))
+        img.save(preview_path, optimize=True, quality=90)
+
+    def __create_preview_from_video(self, orig_path: str, preview_path: str):
+        video = cv2.VideoCapture(orig_path)
+        _, image = video.read()
+        cv2.imwrite(preview_path, image)
+        img = PIL.Image.open(preview_path)
+        width, height = img.size
+        if max(width, height) > self.PREVIEW_MAX_SIZE:
+            scale = self.PREVIEW_MAX_SIZE/max(width, height)
+            img = img.resize((int(width*scale), int(height*scale)))
+        width, height = img.size
+        m1, m2 = width/2,height/2
+        draw = PIL.ImageDraw.Draw(img)
+        scale = max(width, height)/10
+        draw.polygon([(m1-scale/2,m2+scale), (m1-scale/2,m2-scale), (m1+scale,m2)], fill = 'white')
         img.save(preview_path, optimize=True, quality=90)
 
 
