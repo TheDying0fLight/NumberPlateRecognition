@@ -89,15 +89,17 @@ class FileManger(dict[str, Image]):
         img.save(preview_path, optimize=True, quality=90)
 
 
-    def export_image(self, name: str, export_path: str):
-        img = self.__getitem__(name)
+    def export_image(self, id: str, export_path: str):
+        img = self.__getitem__(id)
         if '.' not in export_path:
             export_path += '.' + img.orig_fmt
         shutil.copy(img.get_path_orig(), export_path)
         img.saved = True
 
-    def __delitem__(self, name: str):
-        img = self.__getitem__(name)
-        os.remove(img.get_path())
-        super().__delitem__(name)
-
+    def __delitem__(self, id: str):
+        img = self.__getitem__(id)
+        dir = self.cache_path + img.id
+        for file in os.listdir(dir):
+            os.remove(dir + '/' + file)
+        os.rmdir(dir)
+        super().__delitem__(id)

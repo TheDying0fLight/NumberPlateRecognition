@@ -18,7 +18,7 @@ class UI_App:
         self.page: ft.Page = None
         self.colors: ColorPalette = DarkColors
         self.image_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
-        self.preview_bar = ft.Column([], expand=True, spacing=10)
+        self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
         self.npr = NumberPlateRecognition()
@@ -66,9 +66,9 @@ class UI_App:
     def export_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.path is None: return
         img = self.file_manager[self.selected_img]
-        self.file_manager.export_image(img.name, file_results.path)
+        self.file_manager.export_image(img.id, file_results.path)
         if img.has_to_be_closed:
-            self.close_image(img.name)
+            self.close_image(img.id)
 
     def close_image(self, name):
         self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
@@ -83,11 +83,11 @@ class UI_App:
             self.file_picker_export.save_file(file_name=img.get_orig_name())
             img.has_to_be_closed = True
         if img.saved:
-            self.close_image(img.name)
+            self.close_image(img.id)
         else:
             self.page.open(AlertSaveWindow(
                 save_callback=save_callback,
-                close_callback=lambda: self.close_image(img.name)
+                close_callback=lambda: self.close_image(img.id)
             ))
 
     def settings_callback(self, info: ft.ControlEvent):
