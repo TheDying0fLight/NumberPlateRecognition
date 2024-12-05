@@ -1,22 +1,22 @@
 import flet as ft
 from safe_video.number_plate_recognition import NumberPlateRecognition
 from .dataclasses import Video, Image, ColorPalette
-from .components import PreviewImage, AlertSaveWindow
+from .components import PreviewImage, AlertSaveWindow, VideoPlayer
 from .helper_classes import FileManger
-
-CACHE_PATH = "safe_video/upload_cache/"
 
 DarkColors = ColorPalette(
     normal = "#1a1e26",
-    light = "#232833",
+    background = "#232833",
     dark = "#101217",
+    selected = '#2b84ff',
+    text =  '#aec1eb'
 )
 
 class UI_App:
     def __init__(self):
-        self.file_manager = FileManger(CACHE_PATH)
-        self.page: ft.Page = None
         self.colors: ColorPalette = DarkColors
+        self.file_manager = FileManger(self.colors)
+        self.page: ft.Page = None
         self.image_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
@@ -39,9 +39,9 @@ class UI_App:
     def load_images(self, ids: list[str]):
         if len(ids) == 0: return
         for id in ids:
-            img = self.file_manager[id]
-            img.preview_container = PreviewImage(img.id, img.get_path_preview(), self.switch_image_callback)
-            self.preview_bar.controls.append(img.preview_container)
+            media = self.file_manager[id]
+            media.preview_container = PreviewImage(media.id, media.get_path_icon(), self.switch_image_callback, select_color=self.colors.selected, video=(type(media) == Video))
+            self.preview_bar.controls.append(media.preview_container)
         self.switch_image(ids[-1])
         self.page.update()
 
@@ -54,9 +54,12 @@ class UI_App:
             self.image_container.content = None
         else:
             self.selected_img = id
-            img = self.file_manager[id]
-            img.selected(True)
-            self.image_container.content = ft.Image(img.get_path_preview(), fit=ft.ImageFit.CONTAIN)
+            media = self.file_manager[id]
+            media.selected(True)
+            if type(media) is Image:
+                self.image_container.content = ft.Image(media.get_path_preview(), fit=ft.ImageFit.CONTAIN)
+            if type(media) is Video:
+                self.image_container.content = VideoPlayer(media.get_path_preview(), media.aspect_ratio, colors=self.colors)
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
@@ -97,17 +100,20 @@ class UI_App:
         self.page = page
         page.padding = 0
         page.spacing = 0
-        page.bgcolor = self.colors.light
+        page.bgcolor = self.colors.background
         page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
         page.add(
             ft.Container(ft.Row([
                 ft.Container(content=ft.IconButton(ft.icons.BLUR_ON, focus_color=self.colors.dark), width=50),
-                ft.ElevatedButton("Open Image", on_click=lambda _: self.file_picker_open.pick_files(file_type=ft.FilePickerFileType.MEDIA, allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
-                ft.ElevatedButton("Export file", on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_img].get_orig_name()), icon=ft.icons.SAVE_ALT),
-                ft.ElevatedButton("Close file", on_click=self.close_callback, icon=ft.icons.DELETE),
-                ft.ElevatedButton("Blur all", on_click=lambda _: self.blur_callback(), icon=ft.icons.PLAY_ARROW),
+                ft.ElevatedButton("Open Image", color=self.colors.text, on_click=lambda _: self.file_picker_open.pick_files(
+                    file_type=ft.FilePickerFileType.CUSTOM,
+                    allowed_extensions = self.file_manager.IMAGE_FMTS + self.file_manager.VIDEO_FMTS,
+                    allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
+                ft.ElevatedButton("Export file", color=self.colors.text, on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_img].get_orig_name()), icon=ft.icons.SAVE_ALT),
+                ft.ElevatedButton("Close file", color=self.colors.text, on_click=self.close_callback, icon=ft.icons.DELETE),
+                ft.ElevatedButton("Blur all", color=self.colors.text, on_click=lambda _: self.blur_callback(), icon=ft.icons.PLAY_ARROW),
                 ft.Row([], expand=True),
                 ft.IconButton(on_click=self.settings_callback, icon=ft.icons.SETTINGS)
             ]), padding=10, bgcolor=self.colors.dark),
