@@ -23,25 +23,49 @@ class DetectionResults:
         for a,b in self.__dict__.items(): ret = f"{ret}{a}: {b}\n"
         return ret
 
-    def get_key(self, val: str):
-        return list(self.clslgd.keys())[list(self.clslgd.values()).index(val)]
-
     def tuple(self): return self.__dict__.values()
 
+def get_key(dct: dict, val: str):
+    return list(dct.keys())[list(dct.values()).index(val)]
 
-class NumberPlateRecognition():
+class ObjectDetection():
     def __init__(self, file_path: str = "."):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.file_path = file_path
-        plate_model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt")
-        self.plate_model = YOLO(plate_model_path, task='detect')
-        yolo_model_path = os.path.join(os.path.abspath("."), "models", "yolo11n.pt")
-        self.yolo_model = YOLO(yolo_model_path, task='detect')
+        self.models: list[YOLO] = []
+        self.add_model(os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt"))
+        self.add_model(os.path.join(os.path.abspath("."), "models", "yolo11n.pt"))
         self.conf_interval = 0.5
 
-    def analyze(self, image: Img, model: YOLO) -> DetectionResults:
-        result: Results = model(image)[0]
-        data = result.boxes.cpu().numpy()
-        return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
+    def add_model(self, path: str):
+        model = YOLO(path, task="detect")
+        model.to(self.device)
+        self.models.append(model)
+
+    def analyze(self, image: Img, classes: list[str], verbose = False) -> DetectionResults:
+        mdl_clss: dict[YOLO, list] = {}
+        for mdl_idx in range(len(self.models)):
+            clss = self.models[mdl_idx].names
+            mdl_clss[mdl_idx] = []
+            for cls in classes.copy():
+                if len(classes) == 0: break
+                try:
+                    cls_idx = get_key(clss, cls)
+                    classes.remove(cls)
+                    mdl_clss[mdl_idx].append(cls_idx)
+                except Exception as e:
+                    if verbose: print(e)
+            else: continue
+            break
+        print(mdl_clss)
+        for mdl,clss in mdl_clss.items():
+            if len(clss) == 0: continue
+            self.result: Results = self.models[mdl](image, classes = clss)[0]
+        # result: Results = model(image)[0]
+        data = self.result.boxes.cpu().numpy()
+        return DetectionResults(data.xyxy,data.conf,data.cls,self.result.names)
+
+    def get_classes(self): return [m.names for m in self.models]
 
     def blur_image(self, image: Img, boxes: np.ndarray[Boxes]):
         image = image.copy()
