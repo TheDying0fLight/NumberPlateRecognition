@@ -80,7 +80,7 @@ class ObjectDetection():
         return image[y1:y2,x1:x2]
 
 
-    def chained_detection(self, image: Img, cls1, cls2) -> Results:
+    def chained_detection(self, image: Img, cls1: str, cls2: str) -> Results:
         cls1_results = self.analyze(image, cls1)
         cls1_id = get_key(cls1_results.names, cls1)
 
