@@ -2,7 +2,7 @@ from ultralytics.engine.results import Boxes, Results
 from copy import deepcopy
 import numpy as np
 
-def merge_results(result1: Results, result2: Results):
+def merge_results(result1: Results, result2: Results) -> Results:
     boxes1: Boxes = result1.boxes
     boxes2: Boxes = deepcopy(result2.boxes)
     merged_result: Results = deepcopy(result1)
