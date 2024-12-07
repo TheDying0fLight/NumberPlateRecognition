@@ -1,5 +1,5 @@
 import flet as ft
-from safe_video.number_plate_recognition import NumberPlateRecognition
+from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette
 from .components import PreviewImage, AlertSaveWindow
 from .helper_classes import FileManger
@@ -21,7 +21,7 @@ class UI_App:
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
-        self.npr = NumberPlateRecognition()
+        self.npr = ObjectDetection()
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
 

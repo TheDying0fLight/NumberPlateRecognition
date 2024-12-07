@@ -1,5 +1,8 @@
+from .utils import *
+
 from PIL import Image
 from pathlib import Path
+from copy import deepcopy
 
 import os
 from ultralytics import YOLO
@@ -7,83 +10,92 @@ import cv2
 from ultralytics.engine.results import Boxes, Results
 import numpy as np
 import torch
-from dataclasses import dataclass
-from typing import Any
 Img = str|Path|int|Image.Image|list|tuple|np.ndarray|torch.Tensor
 
-@dataclass
-class DetectionResults:
-    boxes:  np.ndarray[Any, Any]
-    conf:   np.ndarray[Any, Any]
-    cls:    np.ndarray[Any, Any]
-    clslgd: dict[int, str]
-
-    def __str__(self):
-        ret = ""
-        for a,b in self.__dict__.items(): ret = f"{ret}{a}: {b}\n"
-        return ret
-
-    def get_key(self, val: str):
-        return list(self.clslgd.keys())[list(self.clslgd.values()).index(val)]
-
-    def tuple(self): return self.__dict__.values()
-
-
-class NumberPlateRecognition():
+class ObjectDetection():
     def __init__(self, file_path: str = "."):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.file_path = file_path
-        plate_model_path = os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt")
-        self.plate_model = YOLO(plate_model_path, task='detect')
-        yolo_model_path = os.path.join(os.path.abspath("."), "models", "yolo11n.pt")
-        self.yolo_model = YOLO(yolo_model_path, task='detect')
+        self.models: list[YOLO] = []
+        self.add_model(os.path.join(os.path.abspath("."),"models","first10ktrain","weights","best.pt"))
+        self.add_model(os.path.join(os.path.abspath("."),"models","yolo11n.pt"))
         self.conf_interval = 0.5
 
-    def analyze(self, image: Img, model: YOLO) -> DetectionResults:
-        result: Results = model(image)[0]
-        data = result.boxes.cpu().numpy()
-        return DetectionResults(data.xyxy,data.conf,data.cls,result.names)
 
-    def blur_image(self, image: Img, boxes: np.ndarray[Boxes]):
+    def add_model(self, path: str):
+        model = YOLO(path, task="detect")
+        model.to(self.device)
+        self.models.append(model)
+
+
+    def analyze(self, image: Img, classes: list[str]|str, verbose = False) -> Results:
+        if type(classes) is str: classes = [classes]
+        # select with what model which classes are detected
+        mdl_clss: dict[int, list] = {}
+        for mdl_idx in range(len(self.models)):
+            clss = self.models[mdl_idx].names
+            mdl_clss[mdl_idx] = []
+            for cls in classes.copy():
+                if len(classes) == 0: break
+                try:
+                    cls_idx = get_key(clss, cls)
+                    classes.remove(cls)
+                    mdl_clss[mdl_idx].append(cls_idx)
+                except Exception as e:
+                    if verbose: print(e)
+            else: continue
+            break
+        if len(classes) > 0: print(f"Could not find models for the following classes: {classes}")
+        # detect and combine results
+        self.result = None
+        for mdl,clss in mdl_clss.items():
+            if len(clss) == 0: continue
+            res = self.models[mdl](image, classes = clss)[0].cpu().numpy()
+            if self.result is None:
+                self.result = res
+            else:
+                self.result = merge_results(self.result, res)
+        return self.result
+
+
+    def get_classes(self) -> list[str]: return np.concatenate([list(m.names.values()) for m in self.models])
+
+
+    def blur_image(self, image: Img, results: Results, classes: list[str]|str) -> np.ndarray:
+        if type(classes) is str: classes = [classes]
         image = image.copy()
-        for box in boxes:
+        for box, cls in zip(results.boxes.xyxy, results.boxes.cls):
+            if not results.names[cls] in classes: continue
             cropped_img = self.crop_image(image, box)
             blurred_img = cv2.GaussianBlur(cropped_img, (25,25),0)
             x1,y1,x2,y2 = box.astype("int")
             image[y1:y2,x1:x2] = blurred_img
         return image
 
-    def crop_image(self, image: Img, xyxy: np.ndarray):
+
+    def crop_image(self, image: Img, xyxy: np.ndarray) -> np.ndarray:
         assert len(xyxy) == 4, "Array must have exactly 4 entries"
         x1,y1,x2,y2 = xyxy.astype("int")
         return image[y1:y2,x1:x2]
 
-    def chained_detection(self, image: Img, cls: str) -> DetectionResults:
-        data = self.analyze(image, self.yolo_model)
-        car_class_id = data.get_key(cls)
-        car_boxes_coordinates = data.boxes[data.cls == car_class_id]
-        car_boxes_conf = data.conf[data.cls == car_class_id]
 
-        store_box = []
-        store_conf = []
+    def chained_detection(self, image: Img, cls1: str, cls2: str) -> Results:
+        cls1_results = self.analyze(image, cls1)
+        cls1_id = get_key(cls1_results.names, cls1)
 
-        for box,conf in zip(car_boxes_coordinates,car_boxes_conf):
-            if conf < self.conf_interval: continue
-            x1,y1,_,_ =  box.astype("int")
+        cls1_boxes = cls1_results.boxes[cls1_results.boxes.cls == cls1_id]
+        cls1_boxes = cls1_boxes[cls1_boxes.conf >= self.conf_interval]
+
+        merged_results = deepcopy(cls1_results)
+
+        for box in cls1_boxes.xyxy:
+            x1, y1, _, _ = box.astype("int")
             cropped_image = self.crop_image(image, box)
 
-            # looking for plates
-            plate_rec = self.analyze(cropped_image, self.plate_model)
-            num_plates = len(plate_rec.boxes)
+            cls2_results = self.analyze(cropped_image, cls2)
+            if cls2_results.boxes.data.size > 0:
+                cls2_results.boxes.data[:, :4] += [x1, y1, x1, y1]
 
-            if num_plates > 0:
-                # transform back to original coordinates
-                transformed_boxes =  np.array(plate_rec.boxes) + [x1, y1, x1, y1]
-                transformed_conf = np.array(plate_rec.conf)
-
-                transformed_boxes = transformed_boxes[transformed_conf > self.conf_interval]
-                transformed_conf = transformed_conf[transformed_conf > self.conf_interval]
-                store_box.extend(transformed_boxes)
-                store_conf.extend(transformed_conf)
-
-        # output store_box contains the coordinates of the plates which needs to be blurred
-        return DetectionResults(np.array(store_box), np.array(store_conf), None, None)
+            merged_results = merge_results(merged_results, cls2_results)
+        self.result = merged_results
+        return self.result
