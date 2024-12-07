@@ -1,5 +1,5 @@
 import flet as ft
-from safe_video.number_plate_recognition import NumberPlateRecognition
+from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette
 from .components import PreviewImage, AlertSaveWindow
 from .helper_classes import FileManger
@@ -18,10 +18,10 @@ class UI_App:
         self.page: ft.Page = None
         self.colors: ColorPalette = DarkColors
         self.image_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
-        self.preview_bar = ft.Column([], expand=True, spacing=10)
+        self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
-        self.npr = NumberPlateRecognition()
+        self.npr = ObjectDetection()
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
 
@@ -40,23 +40,23 @@ class UI_App:
         if len(names) == 0: return
         for name in names:
             img = self.file_manager[name]
-            img.preview_ref = PreviewImage(img.name, img.get_path(), self.switch_image_callback)
-            self.preview_bar.controls.append(img.preview_ref)
+            img.preview_container = PreviewImage(img.id, img.get_path_preview(), self.switch_image_callback)
+            self.preview_bar.controls.append(img.preview_container)
         self.switch_image(names[-1])
         self.page.update()
 
-    def switch_image(self, name):
+    def switch_image(self, id: str):
         if self.selected_img is not None:
-            if name == self.selected_img: return
+            if id == self.selected_img: return
             self.file_manager[self.selected_img].selected(False)
-        if name not in self.file_manager: # image was probably deleted
+        if id not in self.file_manager: # image was probably deleted
             self.selected_img = None
             self.image_container.content = None
         else:
-            self.selected_img = name
-            img = self.file_manager[name]
+            self.selected_img = id
+            img = self.file_manager[id]
             img.selected(True)
-            self.image_container.content = ft.Image(img.get_path(), fit=ft.ImageFit.CONTAIN)
+            self.image_container.content = ft.Image(img.get_path_preview(), fit=ft.ImageFit.CONTAIN)
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
@@ -66,9 +66,9 @@ class UI_App:
     def export_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.path is None: return
         img = self.file_manager[self.selected_img]
-        self.file_manager.export_image(img.name, file_results.path)
+        self.file_manager.export_image(img.id, file_results.path)
         if img.has_to_be_closed:
-            self.close_image(img.name)
+            self.close_image(img.id)
 
     def close_image(self, name):
         self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
@@ -80,14 +80,14 @@ class UI_App:
         if self.selected_img is None: return
         img = self.file_manager[self.selected_img]
         def save_callback():
-            self.file_picker_export.save_file(file_name=img.orig_name)
+            self.file_picker_export.save_file(file_name=img.get_orig_name())
             img.has_to_be_closed = True
         if img.saved:
-            self.close_image(img.name)
+            self.close_image(img.id)
         else:
             self.page.open(AlertSaveWindow(
                 save_callback=save_callback,
-                close_callback=lambda: self.close_image(img.name)
+                close_callback=lambda: self.close_image(img.id)
             ))
 
     def settings_callback(self, info: ft.ControlEvent):
