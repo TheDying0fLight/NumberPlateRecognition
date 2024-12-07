@@ -22,8 +22,7 @@ class PreviewImage(ft.Stack):
         super().__init__(
             key=key,
             controls=[self.container, self.triangle] if video else [self.container],
-            alignment=ft.alignment.center,
-            key=key
+            alignment=ft.alignment.center
         )
 
     def toggle_selected(self, selected):
