@@ -59,10 +59,10 @@ class ObjectDetection():
         return self.result
 
 
-    def get_classes(self): return np.concatenate([list(m.names.values()) for m in self.models])
+    def get_classes(self) -> list[str]: return np.concatenate([list(m.names.values()) for m in self.models])
 
 
-    def blur_image(self, image: Img, results: Results, classes: list[str]|str):
+    def blur_image(self, image: Img, results: Results, classes: list[str]|str) -> np.ndarray:
         if type(classes) is str: classes = [classes]
         image = image.copy()
         for box, cls in zip(results.boxes.xyxy, results.boxes.cls):
@@ -74,7 +74,7 @@ class ObjectDetection():
         return image
 
 
-    def crop_image(self, image: Img, xyxy: np.ndarray):
+    def crop_image(self, image: Img, xyxy: np.ndarray) -> np.ndarray:
         assert len(xyxy) == 4, "Array must have exactly 4 entries"
         x1,y1,x2,y2 = xyxy.astype("int")
         return image[y1:y2,x1:x2]

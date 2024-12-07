@@ -28,5 +28,5 @@ def merge_results(result1: Results, result2: Results) -> Results:
     return merged_result
 
 
-def get_key(dct: dict, val: str):
+def get_key(dct: dict, val: str) -> int:
     return list(dct.keys())[list(dct.values()).index(val)]
