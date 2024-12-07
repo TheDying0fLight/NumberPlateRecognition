@@ -21,7 +21,8 @@ class PreviewImage(ft.Stack):
                 paint=ft.Paint(style=ft.PaintingStyle.STROKE, stroke_width=1, color='#3e3f40', stroke_cap=ft.StrokeCap.ROUND))]))
         super().__init__(
             controls=[self.container, self.triangle] if video else [self.container],
-            alignment=ft.alignment.center
+            alignment=ft.alignment.center,
+            key=key
         )
 
     def toggle_selected(self, selected):
