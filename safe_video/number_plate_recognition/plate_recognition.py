@@ -46,7 +46,6 @@ class ObjectDetection():
             else: continue
             break
         if len(classes) > 0: print(f"Could not find models for the following classes: {classes}")
-        print(mdl_clss)
         # detect and combine results
         self.result = None
         for mdl,clss in mdl_clss.items():
