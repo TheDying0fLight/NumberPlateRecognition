@@ -3,11 +3,21 @@ from copy import deepcopy
 import numpy as np
 
 def merge_results(result1: Results, result2: Results) -> Results:
+    """
+    Merges the bounding boxes of two YOLO results and also updates the class mapping.
+
+    Args:
+        result1 (Results): First YOLO result
+        result2 (Results): Second YOLO result
+
+    Returns:
+        Results: Merged YOLO result containing all bounding boxes from both results and also updated class mapping
+    """
     boxes1: Boxes = result1.boxes
     boxes2: Boxes = deepcopy(result2.boxes)
     merged_result: Results = deepcopy(result1)
     new_class_mapping: dict[int, str] = {}
-    current_max_class_idx: int = max(result1.names.keys()) if len(result1.names) > 0 else -1
+    current_max_class_idx: int = max(result1.names.keys(), default=-1)
 
     # check for existing classes in results1 and append new classes from results2
     for cls_id2, cls_name2 in result2.names.items():

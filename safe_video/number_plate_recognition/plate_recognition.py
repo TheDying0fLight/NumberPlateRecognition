@@ -31,7 +31,7 @@ class ObjectDetection():
     def analyze(self, image: Img, classes: list[str]|str, verbose = False) -> Results:
         if type(classes) is str: classes = [classes]
         # select with what model which classes are detected
-        mdl_clss: dict[YOLO, list] = {}
+        mdl_clss: dict[int, list] = {}
         for mdl_idx in range(len(self.models)):
             clss = self.models[mdl_idx].names
             mdl_clss[mdl_idx] = []
