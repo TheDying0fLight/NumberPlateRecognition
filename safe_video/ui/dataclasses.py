@@ -49,6 +49,7 @@ class Image(Media):
 class Video(Media):
     def __init__(self, media: Media, aspect_ratio):
         self.aspect_ratio: float = aspect_ratio
+        self.position: float = 0
         super().__init__(*media.__dict__.values())
 
 @dataclass

@@ -20,6 +20,7 @@ class PreviewImage(ft.Stack):
                 [ft.canvas.Path.MoveTo(-4, 8), ft.canvas.Path.LineTo(-4, -8), ft.canvas.Path.LineTo(8, 0), ft.canvas.Path.Close()],
                 paint=ft.Paint(style=ft.PaintingStyle.STROKE, stroke_width=1, color='#3e3f40', stroke_cap=ft.StrokeCap.ROUND))]))
         super().__init__(
+            key=key,
             controls=[self.container, self.triangle] if video else [self.container],
             alignment=ft.alignment.center
         )

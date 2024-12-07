@@ -17,7 +17,7 @@ class UI_App:
         self.colors: ColorPalette = DarkColors
         self.file_manager = FileManger(self.colors)
         self.page: ft.Page = None
-        self.image_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
+        self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
@@ -48,18 +48,22 @@ class UI_App:
     def switch_image(self, id: str):
         if self.selected_img is not None:
             if id == self.selected_img: return
-            self.file_manager[self.selected_img].selected(False)
+            media = self.file_manager[self.selected_img]
+            media.selected(False)
+            if type(media) is Video:
+                media.position = self.media_container.content.get_current_position()
         if id not in self.file_manager: # image was probably deleted
             self.selected_img = None
-            self.image_container.content = None
+            self.media_container.content = None
         else:
             self.selected_img = id
             media = self.file_manager[id]
             media.selected(True)
             if type(media) is Image:
-                self.image_container.content = ft.Image(media.get_path_preview(), fit=ft.ImageFit.CONTAIN)
+                self.media_container.content = ft.Image(media.get_path_preview(), fit=ft.ImageFit.CONTAIN)
             if type(media) is Video:
-                self.image_container.content = VideoPlayer(media.get_path_preview(), media.aspect_ratio, colors=self.colors)
+                self.media_container.content = VideoPlayer(media.get_path_preview(), media.aspect_ratio, colors=self.colors)
+                # TODO: set player to current position
         self.page.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
@@ -74,7 +78,9 @@ class UI_App:
             self.close_image(img.id)
 
     def close_image(self, name):
+        print(len(self.preview_bar.controls))
         self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
+        print(len(self.preview_bar.controls))
         self.selected_img = None
         del self.file_manager[name]
         self.switch_image(list(self.file_manager.keys())[0] if len(self.file_manager) >= 1 else '')
@@ -101,7 +107,7 @@ class UI_App:
         page.padding = 0
         page.spacing = 0
         page.bgcolor = self.colors.background
-        page.on_keyboard_event = lambda e: print(e)
+        # page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
         page.add(
@@ -119,7 +125,7 @@ class UI_App:
             ]), padding=10, bgcolor=self.colors.dark),
             ft.Row([
                 ft.Container(self.preview_bar, bgcolor=self.colors.normal, padding=10, width=70),
-                self.image_container,
+                self.media_container,
                 ft.Container(ft.Column([
                     ft.ExpansionTile(
                         title=ft.Text("Number Plates"),
