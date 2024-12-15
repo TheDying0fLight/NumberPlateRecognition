@@ -1,1 +1,1 @@
-from .plate_recognition import NumberPlateRecognition
+from .plate_recognition import ObjectDetection
