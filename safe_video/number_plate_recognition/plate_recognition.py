@@ -3,6 +3,7 @@ from .utils import *
 from PIL import Image
 from pathlib import Path
 from copy import deepcopy
+from IPython.display import clear_output
 
 import os
 from ultralytics import YOLO
@@ -56,6 +57,7 @@ class ObjectDetection():
                 self.result = res
             else:
                 self.result = merge_results(self.result, res)
+        if not verbose: clear_output()
         return self.result
 
 
