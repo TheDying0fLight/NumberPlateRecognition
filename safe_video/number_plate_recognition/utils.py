@@ -46,6 +46,5 @@ def filter_results(results: Results, class_filter: list[str]|str) -> Results:
     if type(class_filter) is str: class_filter = [class_filter]
 
     class_filter = [get_key(results.names, cls) for cls in class_filter]
-    filt = filter(lambda d: d[-1] in class_filter, results.boxes.data)
-    results.boxes.data = np.array(list(filt))
+    results.boxes.data = np.array([d for d in results.boxes.data if d[-1] in class_filter])
     return results
