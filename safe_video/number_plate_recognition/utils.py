@@ -40,3 +40,17 @@ def merge_results(result1: Results, result2: Results) -> Results:
 
 def get_key(dct: dict, val: str) -> int:
     return list(dct.keys())[list(dct.values()).index(val)]
+
+
+def filter_results(results: Results, class_filter: list[str]|str) -> Results:
+    if type(class_filter) is str: class_filter = [class_filter]
+    dict_classes = results.names
+    class_filter = [get_key(dict_classes, class_name) for class_name in class_filter]
+
+    def filter_func(obj):
+        print(obj)
+        data = obj[-1]
+        return (data in class_filter)
+
+    results.boxes.data = np.array(list(filter(filter_func, results.boxes.data)))
+    return results

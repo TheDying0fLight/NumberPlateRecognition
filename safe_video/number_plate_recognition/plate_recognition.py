@@ -14,6 +14,7 @@ Img = str|Path|int|Image.Image|list|tuple|np.ndarray|torch.Tensor
 
 class ObjectDetection():
     def __init__(self, file_path: str = "."):
+        self.result = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.file_path = file_path
         self.models: list[YOLO] = []
@@ -98,18 +99,4 @@ class ObjectDetection():
 
             merged_results = merge_results(merged_results, cls2_results)
         self.result = merged_results
-        return self.result
-
-
-    def filter_results(self, class_filter: list[str]|str) -> Results:
-        if type(class_filter) is str: class_filter = [class_filter]
-        dict_classes = self.result.names
-        class_filter = [get_key(dict_classes, class_name) for class_name in class_filter]
-
-        def filter_func(obj):
-            print(obj)
-            data = obj[-1]
-            return (data in class_filter)
-
-        self.result.boxes.data = np.array(list(filter(filter_func, self.result.boxes.data)))
         return self.result
