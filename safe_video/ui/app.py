@@ -1,8 +1,8 @@
 import flet as ft
 from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette
-from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile
-from .helper_classes import FileManger, ModelManager
+from .components import PreviewImage, AlertSaveWindow, VideoPlayer
+from .helper_classes import FileManger
 
 DarkColors = ColorPalette(
     normal = "#1a1e26",
@@ -16,12 +16,12 @@ class UI_App:
     def __init__(self):
         self.colors: ColorPalette = DarkColors
         self.file_manager = FileManger(self.colors)
-        self.model_manager = ModelManager()
         self.page: ft.Page = None
         self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
         self.selected_img: str = None
         self.selected = set()
+        self.npr = ObjectDetection()
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
 
@@ -99,9 +99,6 @@ class UI_App:
                 close_callback=lambda: self.close_image(img.id)
             ))
 
-    def add_model_callback(self, info):
-        print('add model')
-
     def settings_callback(self, info: ft.ControlEvent):
         print('TODO: Settings')
 
@@ -130,13 +127,18 @@ class UI_App:
                 ft.Container(self.preview_bar, bgcolor=self.colors.normal, padding=10, width=70),
                 self.media_container,
                 ft.Container(ft.Column([
-                    ft.ListView(self.model_manager.get_tiles(), expand=True),
-                    ft.Container(ft.Row([ft.TextButton(
-                        'Add new model',
-                        icon=ft.icons.ADD,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20),
-                        expand=True,
-                        on_click=self.add_model_callback)]), padding=10)
+                    ft.ExpansionTile(
+                        title=ft.Text("Number Plates"),
+                        leading=ft.Checkbox(),
+                        shape=ft.StadiumBorder(),
+                        controls=[ft.Text("options")]
+                        ),
+                    ft.ExpansionTile(
+                        title=ft.Text("Faces"),
+                        leading=ft.Checkbox(),
+                        shape=ft.StadiumBorder(),
+                        controls=[ft.Text("options")]
+                        ),
                 ], expand=True), bgcolor=self.colors.normal, width=300, expand=0.5, alignment=ft.alignment.top_left),
             ], expand=True),
         )

@@ -1,6 +1,5 @@
 import flet as ft
 
-
 class PreviewImage(ft.Stack):
     def __init__(self, key, path, callback, select_color, video: bool = False):
         self.select_color = select_color
@@ -58,16 +57,3 @@ class VideoPlayer(ft.Video):
             filter_quality=ft.FilterQuality.HIGH,
             muted=False,
         )
-
-class ModelTile(ft.ExpansionTile):
-    def __init__(self, name, active_callback, boundingBox_callback):
-        super().__init__(
-            title=ft.Text(name),
-            leading=ft.Checkbox(on_change=active_callback, value=True, key=name),
-            shape=ft.StadiumBorder(),
-            controls=[ft.TextButton(
-                "show bounding boxes",
-                on_click=boundingBox_callback
-            )],
-            key=name
-            ),

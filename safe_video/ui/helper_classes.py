@@ -3,29 +3,8 @@ import shutil
 import re
 import PIL
 import cv2
-import flet as ft
 
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette
-from .components import ModelTile
-from safe_video.number_plate_recognition import ObjectDetection
-
-class ModelManager(ObjectDetection):
-    def __init__(self):
-        self.detection: ObjectDetection = ObjectDetection()
-        self.models = self.detection.get_classes()[0:2]
-        self.active: dict[str, bool] = {}
-
-    def get_tiles(self):
-        tiles = []
-        for c in self.models:
-            def active(info: ft.ControlEvent):
-                self.active[info.control.key] = not self.active[info.control.key]
-                print(f'{info.control.key}: {self.active[info.control.key]}')
-            def bounding_box(info: ft.ControlEvent):
-                print('bounding_box')
-            self.active[c] = True
-            tiles.append(ModelTile(name=c, active_callback=active, boundingBox_callback=bounding_box))
-        return tiles
 
 class FileManger(dict[str, Media]):
     def __init__(self, colors: ColorPalette):
