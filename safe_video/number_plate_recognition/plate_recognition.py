@@ -40,7 +40,7 @@ class ObjectDetection():
             for target_class in target_classes.copy():
                 if len(target_classes) == 0: break
                 try:
-                    class_index = get_key(model_classes, target_class)
+                    class_index = find_key_by_value(model_classes, target_class)
                     target_classes.remove(target_class)
                     model_class_dict[model_idx].append(class_index)
                 except Exception as e:
