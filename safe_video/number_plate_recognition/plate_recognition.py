@@ -3,6 +3,7 @@ from .utils import *
 from PIL import Image
 from pathlib import Path
 from copy import deepcopy
+from IPython.display import clear_output
 
 import os
 from ultralytics import YOLO
@@ -15,6 +16,7 @@ Img = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
 class ObjectDetection():
     def __init__(self, file_path: str = ".", conf=0.5, iou=0.7, vid_stride=1, stream_buffer=False):
+        self.result = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.file_path = file_path
         self.models: list[YOLO] = []
@@ -51,7 +53,7 @@ class ObjectDetection():
         if len(classes) > 0: print(f"Could not find models for the following classes: {classes}")
         return mdl_clss
 
-    def analyze(self, image: Img, mdl_clss: dict[int, list[int]]) -> Results:
+    def analyze(self, image: Img, mdl_clss: dict[int, list[int]], verbose=False) -> Results:
         # detect and combine results
         self.result = None
         for mdl, clss in mdl_clss.items():
@@ -59,6 +61,7 @@ class ObjectDetection():
             res = self.models[mdl](image, classes=clss)[0].cpu().numpy()
             if self.result is None: self.result = res
             else: self.result = merge_results(self.result, res)
+        if not verbose: clear_output()
         return self.result
 
     def get_classes(self) -> list[str]: return np.concatenate([list(m.names.values()) for m in self.models])
@@ -79,8 +82,8 @@ class ObjectDetection():
         x1, y1, x2, y2 = xyxy.astype("int")
         return image[y1:y2, x1:x2]
 
-    def chained_detection(self, image: Img, mdl_clss1: dict[int, list[int]], mdl_clss2: dict[int, list[int]]) -> Results:
-        cls1_results = self.analyze(image, mdl_clss1)
+    def chained_detection(self, image: Img, mdl_clss1: dict[int, list[int]], mdl_clss2: dict[int, list[int]], verbose = False) -> Results:
+        cls1_results = self.analyze(image, mdl_clss1, verbose)
         merged_results = deepcopy(cls1_results)
 
         for box in cls1_results.boxes.xyxy:
@@ -95,18 +98,18 @@ class ObjectDetection():
         self.result = merged_results
         return self.result
 
-    def detect_image(self, image: Img, class1: list[str] | str, class2: list[str] | str = None) -> Results:
+    def detect_image(self, image: Img, class1: list[str] | str, class2: list[str] | str = None, verbose = False) -> Results:
 
         if type(class1) is str: class1 = [class1]
         if type(class2) is str: class2 = [class2]
 
         if class2 is None:
             mdl_clss = self.choose_model(class1, False)
-            detections = self.analyze(image, mdl_clss)
+            detections = self.analyze(image, mdl_clss, verbose)
         else:
             mdl_clss1 = self.choose_model(class1, False)
             mdl_clss2 = self.choose_model(class2, False)
-            detections = self.chained_detection(image, mdl_clss1, mdl_clss2)
+            detections = self.chained_detection(image, mdl_clss1, mdl_clss2, verbose)
 
         return detections
 
@@ -125,7 +128,7 @@ class ObjectDetection():
                 if frame_count % vid_stride != 0:
                     frame_count += 1
                     continue
-                detections = self.analyze(frame, mdl_clss1)
+                detections = self.analyze(frame, mdl_clss1, verbose)
 
                 # TODO delete later is for testing
                 frame = detections.plot()
@@ -142,7 +145,7 @@ class ObjectDetection():
                 if frame_count % vid_stride != 0:
                     frame_count += 1
                     continue
-                detections = self.chained_detection(frame, mdl_clss1, mdl_clss2)
+                detections = self.chained_detection(frame, mdl_clss1, mdl_clss2, verbose)
 
                 # TODO delete later is for testing
                 frame = detections.plot()
