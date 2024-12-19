@@ -39,3 +39,11 @@ def merge_results(result1: Results, result2: Results) -> Results:
 
 def find_key_by_value(dictionary: dict, value: str) -> int:
     return list(dictionary.keys())[list(dictionary.values()).index(value)]
+
+
+def filter_results(results: Results, class_filter: list[str]|str) -> Results:
+    if type(class_filter) is str: class_filter = [class_filter]
+
+    class_filter = [find_key_by_value(results.names, cls) for cls in class_filter]
+    results.boxes.data = np.array([d for d in results.boxes.data if d[-1] in class_filter])
+    return results

@@ -3,6 +3,7 @@ from .utils import *
 from PIL import Image
 from pathlib import Path
 from copy import deepcopy
+from IPython.display import clear_output
 
 import os
 from ultralytics import YOLO
@@ -15,6 +16,7 @@ ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.
 
 class ObjectDetection():
     def __init__(self, file_path: str = ".", confidence_threshold=0.5, iou_threshold=0.7, video_stride=1, enable_stream_buffer=False):
+        self.result = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.file_path = file_path
         self.models: list[YOLO] = []
@@ -50,7 +52,7 @@ class ObjectDetection():
         if len(target_classes) > 0: print(f"Could not find models for the following classes: {target_classes}")
         return model_class_dict
 
-    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]]) -> Results:
+    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], verbose=False) -> Results:
         # detect and combine results
         self.result = None
         for model_idx, class_indices in model_class_dict.items():
@@ -58,6 +60,7 @@ class ObjectDetection():
             detection_results = self.models[model_idx](image, classes=class_indices)[0].cpu().numpy()
             if self.result is None: self.result = detection_results
             else: self.result = merge_results(self.result, detection_results)
+        if not verbose: clear_output()
         return self.result
 
     def get_classes(self) -> list[str]: return np.concatenate([list(model.names.values()) for model in self.models])
@@ -79,15 +82,15 @@ class ObjectDetection():
         x1, y1, x2, y2 = bbox.astype("int")
         return image[y1:y2, x1:x2]
 
-    def chain_detection(self, image: ImageInput, primary_class_dict: dict[int, list[int]], secondary_class_dict: dict[int, list[int]]) -> Results:
-        primary_results = self.detect_objects(image, primary_class_dict)
+    def chain_detection(self, image: ImageInput, primary_class_dict: dict[int, list[int]], secondary_class_dict: dict[int, list[int]], verbose=False) -> Results:
+        primary_results = self.detect_objects(image, primary_class_dict, verbose)
         merged_results = deepcopy(primary_results)
 
         for bbox in primary_results.boxes.xyxy:
             x1, y1, _, _ = bbox.astype("int")
             cropped_image = self.crop_image(image, bbox)
 
-            secondary_results = self.detect_objects(cropped_image, secondary_class_dict)
+            secondary_results = self.detect_objects(cropped_image, secondary_class_dict, verbose)
             if secondary_results.boxes.data.size > 0:
                 secondary_results.boxes.data[:, :4] += [x1, y1, x1, y1]
 
@@ -95,18 +98,18 @@ class ObjectDetection():
         self.result = merged_results
         return self.result
 
-    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None) -> Results:
+    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False) -> Results:
 
         if type(primary_classes) is str: primary_classes = [primary_classes]
         if type(secondary_classes) is str: secondary_classes = [secondary_classes]
 
         if secondary_classes is None:
             model_class_dict = self.map_classes_to_models(primary_classes, False)
-            return self.detect_objects(image, model_class_dict)
+            return self.detect_objects(image, model_class_dict, verbose)
         else:
             primary_mapping = self.map_classes_to_models(primary_classes, False)
             secondary_mapping = self.map_classes_to_models(secondary_classes, False)
-            return self.chain_detection(image, primary_mapping, secondary_mapping)
+            return self.chain_detection(image, primary_mapping, secondary_mapping, verbose)
 
     def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False):
 
@@ -125,7 +128,7 @@ class ObjectDetection():
                     frame_counter += 1
                     continue
 
-                detections = self.detect_objects(frame, primary_mapping)
+                detections = self.detect_objects(frame, primary_mapping, verbose)
 
                 # TODO delete later is for testing
                 frame = detections.plot()
@@ -142,7 +145,7 @@ class ObjectDetection():
                 if frame_counter % self.video_stride != 0:
                     frame_counter += 1
                     continue
-                detections = self.chain_detection(frame, primary_mapping, secondary_mapping)
+                detections = self.chain_detection(frame, primary_mapping, secondary_mapping, verbose)
 
                 # TODO delete later is for testing
                 frame = detections.plot()
