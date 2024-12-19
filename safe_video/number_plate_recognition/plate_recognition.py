@@ -81,20 +81,15 @@ class ObjectDetection():
 
     def chained_detection(self, image: Img, mdl_clss1: dict[int, list[int]], mdl_clss2: dict[int, list[int]]) -> Results:
         cls1_results = self.analyze(image, mdl_clss1)
-
-        cls1_boxes = cls1_results.boxes
-        cls1_boxes = cls1_boxes[cls1_boxes.conf >= self.conf_interval]
-
         merged_results = deepcopy(cls1_results)
 
-        for box in cls1_boxes.xyxy:
+        for box in cls1_results.boxes.xyxy:
             x1, y1, _, _ = box.astype("int")
             cropped_image = self.crop_image(image, box)
 
             cls2_results = self.analyze(cropped_image, mdl_clss2)
             if cls2_results.boxes.data.size > 0:
                 cls2_results.boxes.data[:, :4] += [x1, y1, x1, y1]
-                cls2_results.boxes = cls2_results.boxes[cls2_results.boxes.conf >= self.conf_interval]
 
             merged_results = merge_results(merged_results, cls2_results)
         self.result = merged_results
