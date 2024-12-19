@@ -63,11 +63,11 @@ class ModelTile(ft.ExpansionTile):
     def __init__(self, name, active_callback, boundingBox_callback):
         super().__init__(
             title=ft.Text(name),
+            key=name,
             leading=ft.Checkbox(on_change=active_callback, value=True, key=name),
             shape=ft.StadiumBorder(),
             controls=[ft.TextButton(
                 "show bounding boxes",
-                on_click=boundingBox_callback
-            )],
-            key=name
-            ),
+                on_click=boundingBox_callback,
+                key=name
+            )])

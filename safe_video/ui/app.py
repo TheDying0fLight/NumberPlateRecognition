@@ -16,7 +16,7 @@ class UI_App:
     def __init__(self):
         self.colors: ColorPalette = DarkColors
         self.file_manager = FileManger(self.colors)
-        self.model_manager = ModelManager()
+        self.model_manager = ModelManager(self.show_bounding_boxes)
         self.page: ft.Page = None
         self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
@@ -98,6 +98,11 @@ class UI_App:
                 save_callback=save_callback,
                 close_callback=lambda: self.close_image(img.id)
             ))
+    
+    def show_bounding_boxes(self, model_id):
+        print(model_id)
+        fig = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_img].get_path_preview())
+        self.page.add(ft.MatplotlibChart(fig, expand=True))
 
     def add_model_callback(self, info):
         print('add model')

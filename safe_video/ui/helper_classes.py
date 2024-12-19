@@ -4,16 +4,18 @@ import re
 import PIL
 import cv2
 import flet as ft
+from matplotlib import pyplot as plt
 
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette
 from .components import ModelTile
 from safe_video.number_plate_recognition import ObjectDetection
 
-class ModelManager(ObjectDetection):
-    def __init__(self):
+class ModelManager():
+    def __init__(self, bounding_box_func):
         self.detection: ObjectDetection = ObjectDetection()
         self.models = self.detection.get_classes()[0:2]
         self.active: dict[str, bool] = {}
+        self.bounding_box_func = bounding_box_func
 
     def get_tiles(self):
         tiles = []
@@ -22,10 +24,21 @@ class ModelManager(ObjectDetection):
                 self.active[info.control.key] = not self.active[info.control.key]
                 print(f'{info.control.key}: {self.active[info.control.key]}')
             def bounding_box(info: ft.ControlEvent):
+                self.bounding_box_func(info.control.key)
                 print('bounding_box')
             self.active[c] = True
             tiles.append(ModelTile(name=c, active_callback=active, boundingBox_callback=bounding_box))
         return tiles
+
+    def get_bounding_box_fig(self, model_id, img):
+        print(img, model_id)
+        print(self.detection.get_classes())
+        print(self.detection.analyze(img, model_id))
+        a = self.detection.analyze(img, model_id).plot()
+        plt.imshow(a)
+        fig, ax = plt.subplots()
+        return fig
+
 
 class FileManger(dict[str, Media]):
     def __init__(self, colors: ColorPalette):
