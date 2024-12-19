@@ -58,7 +58,7 @@ class ObjectDetection():
         return self.result
 
 
-    def get_classes(self) -> list[str]: return np.concatenate([list(m.names.values()) for m in self.models])
+    def get_classes(self) -> list[str]: return np.concatenate([list(m.names.values()) for m in self.models]).tolist()
 
 
     def blur_image(self, image: Img, results: Results, classes: list[str]|str) -> np.ndarray:
