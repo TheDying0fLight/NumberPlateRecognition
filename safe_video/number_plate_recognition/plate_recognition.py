@@ -110,6 +110,11 @@ class ObjectDetection():
             return self.chain_detection(image, primary_mapping, secondary_mapping, verbose)
 
     def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False, debug=False):
+        def debug_show_video(frame):
+            cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                return True
+            
         if type(primary_classes) is str: primary_classes = [primary_classes]
         if type(secondary_classes) is str: secondary_classes = [secondary_classes]
 
@@ -127,7 +132,7 @@ class ObjectDetection():
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                if debug and self.debug_show_video(frame): break
+                if debug and debug_show_video(frame): break
         else:
             primary_mapping = self.map_classes_to_models(primary_classes, verbose)
             secondary_mapping = self.map_classes_to_models(secondary_classes, verbose)
@@ -142,12 +147,9 @@ class ObjectDetection():
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                if debug and self.debug_show_video(frame): break
+                if debug and debug_show_video(frame): break
 
         cap.release()
         cv2.destroyAllWindows()
-    
-    def debug_show_video(self, frame):
-        cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            return True
+        
+
