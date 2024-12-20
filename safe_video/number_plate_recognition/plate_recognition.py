@@ -113,7 +113,7 @@ class ObjectDetection():
 
         return detections
 
-    def detect_video(self, video_path: str, class1: list[str] | str, class2: list[str] | str = None, vid_stride: int = 1, verbose=False):
+    def detect_video(self, video_path: str, class1: list[str] | str, class2: list[str] | str = None, vid_stride: int = 1, verbose=False, debug=False):
 
         if type(class1) is str: class1 = [class1]
         if type(class2) is str: class2 = [class2]
@@ -132,9 +132,7 @@ class ObjectDetection():
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if debug and self.debug_show_video(frame): break
         else:
             mdl_clss1 = self.choose_model(class1, verbose)
             mdl_clss2 = self.choose_model(class2, verbose)
@@ -149,9 +147,12 @@ class ObjectDetection():
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if debug and self.debug_show_video(frame): break
 
         cap.release()
         cv2.destroyAllWindows()
+
+    def debug_show_video(self, frame):
+        cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            return True
