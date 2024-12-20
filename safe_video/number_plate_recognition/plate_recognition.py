@@ -74,7 +74,6 @@ class ObjectDetection():
             blurred_region = cv2.GaussianBlur(cropped_region, (25, 25), 0)
             x1, y1, x2, y2 = bbox.astype("int")
             image_copy[y1:y2, x1:x2] = blurred_region
-
         return image_copy
 
     def crop_image(self, image: ImageInput, bbox: np.ndarray) -> np.ndarray:
@@ -99,7 +98,6 @@ class ObjectDetection():
         return self.result
 
     def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False) -> Results:
-
         if type(primary_classes) is str: primary_classes = [primary_classes]
         if type(secondary_classes) is str: secondary_classes = [secondary_classes]
 
@@ -111,8 +109,7 @@ class ObjectDetection():
             secondary_mapping = self.map_classes_to_models(secondary_classes, False)
             return self.chain_detection(image, primary_mapping, secondary_mapping, verbose)
 
-    def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False):
-
+    def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose=False, debug=False):
         if type(primary_classes) is str: primary_classes = [primary_classes]
         if type(secondary_classes) is str: secondary_classes = [secondary_classes]
 
@@ -122,19 +119,15 @@ class ObjectDetection():
             cap = cv2.VideoCapture(video_path)
             while cap.isOpened():
                 success, frame = cap.read()
-
                 if not success: break
                 if frame_counter % self.video_stride != 0:
                     frame_counter += 1
                     continue
-
                 detections = self.detect_objects(frame, primary_mapping, verbose)
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if debug and self.debug_show_video(frame): break
         else:
             primary_mapping = self.map_classes_to_models(primary_classes, verbose)
             secondary_mapping = self.map_classes_to_models(secondary_classes, verbose)
@@ -149,9 +142,12 @@ class ObjectDetection():
 
                 # TODO delete later is for testing
                 frame = detections.plot()
-                cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if debug and self.debug_show_video(frame): break
 
         cap.release()
         cv2.destroyAllWindows()
+    
+    def debug_show_video(self, frame):
+        cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            return True
