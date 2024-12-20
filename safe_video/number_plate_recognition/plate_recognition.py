@@ -33,15 +33,14 @@ class ObjectDetection():
         model_class_dict: dict[int, list] = {}
         for model_idx in range(len(self.models)):
             model_classes = self.models[model_idx].names
+            model_classes_vals = model_classes.values()
             model_class_dict[model_idx] = []
             for target_class in classes.copy():
                 if len(classes) == 0: break
-                try:
+                if target_class in model_classes_vals:
                     class_idx = find_key_by_value(model_classes, target_class)
                     classes.remove(target_class)
                     model_class_dict[model_idx].append(class_idx)
-                except Exception as e:
-                    if verbose: print(e)
             else: continue
             break
         if len(classes) > 0: print(f"Could not find models for the following classes: {classes}")
@@ -97,12 +96,12 @@ class ObjectDetection():
         if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
         if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
 
-        if (remap_classes):
-            self._primary_mapping = self.map_classes_to_models(primary_classes, verbose)
-            self._secondary_mapping = self.map_classes_to_models(secondary_classes, False)
+        if (remap_classes): self._primary_mapping = self.map_classes_to_models(primary_classes, verbose)
 
         if secondary_classes is None: return self.detect_objects(image, self._primary_mapping, verbose)
-        else:                         return self.chain_detection(image, self._primary_mapping, self._secondary_mapping, verbose)
+        else:
+            self._secondary_mapping = self.map_classes_to_models(secondary_classes, verbose)
+            return self.chain_detection(image, self._primary_mapping, self._secondary_mapping, verbose)
 
     def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None,
                       confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1, enable_stream_buffer: bool = False,
