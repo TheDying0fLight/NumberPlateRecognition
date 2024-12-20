@@ -92,16 +92,17 @@ class ObjectDetection():
         self.result = merged_results
         return self.result
 
-    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, verbose: bool = False) -> Results:
+    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, remap_classes: bool = False, verbose: bool = False) -> Results:
+        if primary_classes is None: raise ValueError("Primary classes must be provided")
         if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
         if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
 
-        primary_mapping = self.map_classes_to_models(primary_classes, verbose)
-        if secondary_classes is None:
-            return self.detect_objects(image, primary_mapping, verbose)
-        else:
-            secondary_mapping = self.map_classes_to_models(secondary_classes, False)
-            return self.chain_detection(image, primary_mapping, secondary_mapping, verbose)
+        if (remap_classes):
+            self._primary_mapping = self.map_classes_to_models(primary_classes, verbose)
+            self._secondary_mapping = self.map_classes_to_models(secondary_classes, False)
+
+        if secondary_classes is None: return self.detect_objects(image, self._primary_mapping, verbose)
+        else:                         return self.chain_detection(image, self._primary_mapping, self._secondary_mapping, verbose)
 
     def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None,
                       confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1, enable_stream_buffer: bool = False,
@@ -109,9 +110,6 @@ class ObjectDetection():
         def debug_show_video(frame: ImageInput) -> bool:
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
             return cv2.waitKey(1) & 0xFF == ord('q')
-
-        if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
-        if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
 
         cap = cv2.VideoCapture(video_path)
         frame_counter = 0
@@ -121,7 +119,7 @@ class ObjectDetection():
             if frame_counter % video_stride != 0:
                 frame_counter += 1
                 continue
-            detections = self.process_image(frame, primary_classes, secondary_classes, verbose)
+            detections = self.process_image(frame, primary_classes, secondary_classes, frame_counter==0, verbose)
 
             # TODO delete later is for testing
             frame = detections.plot()
