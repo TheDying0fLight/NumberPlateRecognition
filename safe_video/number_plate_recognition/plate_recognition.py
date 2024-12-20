@@ -82,7 +82,7 @@ class ObjectDetection():
         x1, y1, x2, y2 = xyxy.astype("int")
         return image[y1:y2, x1:x2]
 
-    def chained_detection(self, image: Img, mdl_clss1: dict[int, list[int]], mdl_clss2: dict[int, list[int]], verbose = False) -> Results:
+    def chained_detection(self, image: Img, mdl_clss1: dict[int, list[int]], mdl_clss2: dict[int, list[int]], verbose=False) -> Results:
         cls1_results = self.analyze(image, mdl_clss1, verbose)
         merged_results = deepcopy(cls1_results)
 
@@ -98,8 +98,7 @@ class ObjectDetection():
         self.result = merged_results
         return self.result
 
-    def detect_image(self, image: Img, class1: list[str] | str, class2: list[str] | str = None, verbose = False) -> Results:
-
+    def detect_image(self, image: Img, class1: list[str] | str, class2: list[str] | str = None, verbose=False) -> Results:
         if type(class1) is str: class1 = [class1]
         if type(class2) is str: class2 = [class2]
 
@@ -110,11 +109,9 @@ class ObjectDetection():
             mdl_clss1 = self.choose_model(class1, False)
             mdl_clss2 = self.choose_model(class2, False)
             detections = self.chained_detection(image, mdl_clss1, mdl_clss2, verbose)
-
         return detections
 
     def detect_video(self, video_path: str, class1: list[str] | str, class2: list[str] | str = None, vid_stride: int = 1, verbose=False, debug=False):
-
         if type(class1) is str: class1 = [class1]
         if type(class2) is str: class2 = [class2]
 
