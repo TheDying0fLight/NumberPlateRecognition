@@ -114,7 +114,7 @@ class ObjectDetection():
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True
-            
+
         if type(primary_classes) is str: primary_classes = [primary_classes]
         if type(secondary_classes) is str: secondary_classes = [secondary_classes]
 
@@ -151,5 +151,3 @@ class ObjectDetection():
 
         cap.release()
         cv2.destroyAllWindows()
-        
-
