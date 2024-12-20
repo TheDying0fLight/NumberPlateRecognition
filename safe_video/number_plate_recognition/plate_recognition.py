@@ -28,7 +28,7 @@ class ObjectDetection():
         model.to(self.device)
         self.models.append(model)
 
-    def map_classes_to_models(self, classes: list[str], verbose: bool = False) -> dict[int, list[int]]:
+    def map_classes_to_models(self, classes: list[str]) -> dict[int, list[int]]:
         # select the right model for each class
         model_class_dict: dict[int, list] = {}
         for model_idx in range(len(self.models)):
@@ -91,7 +91,7 @@ class ObjectDetection():
         self.result = merged_results
         return self.result
 
-    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, remap_classes: bool = False, verbose: bool = False) -> Results:
+    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None, remap_classes: bool = True, verbose: bool = False) -> Results:
         if primary_classes is None: raise ValueError("Primary classes must be provided")
         if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
         if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
