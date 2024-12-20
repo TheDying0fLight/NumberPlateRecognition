@@ -97,7 +97,6 @@ class ObjectDetection():
         if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
 
         if (remap_classes): self._primary_mapping = self.map_classes_to_models(primary_classes, verbose)
-
         if secondary_classes is None: return self.detect_objects(image, self._primary_mapping, verbose)
         else:
             self._secondary_mapping = self.map_classes_to_models(secondary_classes, verbose)
@@ -118,7 +117,7 @@ class ObjectDetection():
             if frame_counter % video_stride != 0:
                 frame_counter += 1
                 continue
-            detections = self.process_image(frame, primary_classes, secondary_classes, frame_counter==0, verbose)
+            detections = self.process_image(frame, primary_classes, secondary_classes, frame_counter == 0, verbose)
 
             # TODO delete later is for testing
             frame = detections.plot()
