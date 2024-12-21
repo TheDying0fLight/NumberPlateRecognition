@@ -75,32 +75,34 @@ class ObjectDetection():
         if not verbose: clear_output()
         return result
 
-    def chain_detection(self, image: ImageInput, primary_class_dict: dict[int, list[int]], secondary_class_dict: dict[int, list[int]], verbose: bool = False) -> Results:
-        primary_results = self.detect_objects(image, primary_class_dict, verbose)
-        secondary_results = None
+    def chain_detection(self, image: ImageInput, class_dicts: list[dict[int, list[int]]], verbose: bool = False) -> Results:
+        results = [self.detect_objects(image, class_dicts[0], verbose)]
 
-        for bbox in primary_results.boxes.xyxy:
-            x1, y1, _, _ = bbox.astype("int")
-            cropped_image = self.crop_image(image, bbox)
-            results = self.detect_objects(cropped_image, secondary_class_dict, verbose)
-            if results.boxes.data.size > 0: results.boxes.data[:, :4] += [x1, y1, x1, y1]
+        for class_dict in class_dicts[1:len(class_dicts)]:
+            results.append(None)
+            for bbox in results[-2].boxes.xyxy:
+                x1, y1, _, _ = bbox.astype("int")
+                cropped_image = self.crop_image(image, bbox)
+                res = self.detect_objects(cropped_image, class_dict, verbose)
+                if res.boxes.data.size > 0: res.boxes.data[:, :4] += [x1, y1, x1, y1]
 
-            if secondary_results is None: secondary_results = results
-            else: secondary_results = merge_results(secondary_results, results)
-        return [primary_results, secondary_results]
+                if results[-1] is None: results[-1] = res
+                else: results[-1] = merge_results(results[-1], res)
+        return results
 
-    def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None,
+    def process_image(self, image: ImageInput, classes: str | list[str | list[str]],
                       remap_classes: bool = True, verbose: bool = False) -> list[Results]:
-        if primary_classes is None: raise ValueError("Primary classes must be provided")
-        if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
-        if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
-        if (remap_classes): self._primary_mapping = self.map_classes_to_models(primary_classes)
-        if secondary_classes is None: return [self.detect_objects(image, self._primary_mapping, verbose)]
-        else:
-            if (remap_classes): self._secondary_mapping = self.map_classes_to_models(secondary_classes)
-            return self.chain_detection(image, self._primary_mapping, self._secondary_mapping, verbose)
+        if classes is None: raise ValueError("Primary classes must be provided")
+        if issubclass(type(classes), str): classes = [classes]
 
-    def process_video(self, video_path: str, primary_classes: list[str] | str, secondary_classes: list[str] | str = None,
+        if (remap_classes):
+            self._class_mappings = []
+            for cls in classes:
+                if issubclass(type(cls), str): cls = [cls]
+                self._class_mappings.append(self.map_classes_to_models(cls))
+        return self.chain_detection(image, self._class_mappings, verbose)
+
+    def process_video(self, video_path: str, classes: str | list[str | list[str]],
                       confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1, enable_stream_buffer: bool = False,
                       debug: bool = False, verbose: bool = False):
         def debug_show_video(frame: ImageInput) -> bool:
@@ -115,7 +117,7 @@ class ObjectDetection():
             if frame_counter % video_stride != 0:
                 frame_counter += 1
                 continue
-            detections = self.process_image(frame, primary_classes, secondary_classes, frame_counter == 0, verbose)
+            detections = self.process_image(frame, classes, frame_counter == 0, verbose)
 
             # TODO delete later is for testing
             if debug:
