@@ -42,20 +42,6 @@ class ObjectDetection():
         x1, y1, x2, y2 = bbox.astype("int")
         return image[y1:y2, x1:x2]
 
-    def chain_detection(self, image: ImageInput, primary_class_dict: dict[int, list[int]], secondary_class_dict: dict[int, list[int]], verbose: bool = False) -> Results:
-        primary_results = self.detect_objects(image, primary_class_dict, verbose)
-        secondary_results = None
-
-        for bbox in primary_results.boxes.xyxy:
-            x1, y1, _, _ = bbox.astype("int")
-            cropped_image = self.crop_image(image, bbox)
-            results = self.detect_objects(cropped_image, secondary_class_dict, verbose)
-            if results.boxes.data.size > 0: results.boxes.data[:, :4] += [x1, y1, x1, y1]
-
-            if secondary_results is None: secondary_results = results
-            else: secondary_results = merge_results(secondary_results, results)
-        return (primary_results, secondary_results)
-
     def map_classes_to_models(self, classes: list[str]) -> dict[int, list[int]]:
         classes = classes.copy()
         cls_len = len(classes)
@@ -89,13 +75,27 @@ class ObjectDetection():
         if not verbose: clear_output()
         return result
 
+    def chain_detection(self, image: ImageInput, primary_class_dict: dict[int, list[int]], secondary_class_dict: dict[int, list[int]], verbose: bool = False) -> Results:
+        primary_results = self.detect_objects(image, primary_class_dict, verbose)
+        secondary_results = None
+
+        for bbox in primary_results.boxes.xyxy:
+            x1, y1, _, _ = bbox.astype("int")
+            cropped_image = self.crop_image(image, bbox)
+            results = self.detect_objects(cropped_image, secondary_class_dict, verbose)
+            if results.boxes.data.size > 0: results.boxes.data[:, :4] += [x1, y1, x1, y1]
+
+            if secondary_results is None: secondary_results = results
+            else: secondary_results = merge_results(secondary_results, results)
+        return [primary_results, secondary_results]
+
     def process_image(self, image: ImageInput, primary_classes: list[str] | str, secondary_classes: list[str] | str = None,
                       remap_classes: bool = True, verbose: bool = False) -> list[Results]:
         if primary_classes is None: raise ValueError("Primary classes must be provided")
         if issubclass(type(primary_classes), str): primary_classes = [primary_classes]
         if issubclass(type(secondary_classes), str): secondary_classes = [secondary_classes]
         if (remap_classes): self._primary_mapping = self.map_classes_to_models(primary_classes)
-        if secondary_classes is None: return (self.detect_objects(image, self._primary_mapping, verbose), None)
+        if secondary_classes is None: return [self.detect_objects(image, self._primary_mapping, verbose)]
         else:
             if (remap_classes): self._secondary_mapping = self.map_classes_to_models(secondary_classes)
             return self.chain_detection(image, self._primary_mapping, self._secondary_mapping, verbose)
