@@ -44,8 +44,8 @@ class ObjectDetection():
 
     def map_classes_to_models(self, classes: list[str]) -> dict[int, list[int]]:
         classes = classes.copy()
-        cls_len = len(classes)
-        if cls_len == 0: raise ValueError("No classes provided")
+        classes_len = len(classes)
+        if classes_len == 0: raise ValueError("No classes provided")
         # select the right model for each class
         model_class_dict: dict[int, list] = {}
         for model_idx in range(len(self.models)):
