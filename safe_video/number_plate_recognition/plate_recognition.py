@@ -83,11 +83,11 @@ class ObjectDetection():
             for bbox in results[-2].boxes.xyxy:
                 x1, y1, _, _ = bbox.astype("int")
                 cropped_image = self.crop_image(image, bbox)
-                res = self.detect_objects(cropped_image, class_dict, verbose)
-                if res.boxes.data.size > 0: res.boxes.data[:, :4] += [x1, y1, x1, y1]
+                result = self.detect_objects(cropped_image, class_dict, verbose)
+                if result.boxes.data.size > 0: result.boxes.data[:, :4] += [x1, y1, x1, y1]
 
-                if results[-1] is None: results[-1] = res
-                else: results[-1] = merge_results(results[-1], res)
+                if results[-1] is None: results[-1] = result
+                else: results[-1] = merge_results(results[-1], result)
         return results
 
     def process_image(self, image: ImageInput, classes: str | list[str | list[str]],
