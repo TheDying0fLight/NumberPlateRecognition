@@ -13,6 +13,8 @@ def merge_results(result1: Results, result2: Results) -> Results:
     Returns:
         Results: Merged YOLO result containing all bounding boxes from both results and also updated class mapping
     """
+    if result1 is None: return result2
+    if result2 is None: return result1
     boxes1: Boxes = result1.boxes
     boxes2: Boxes = deepcopy(result2.boxes)
     merged_result: Results = deepcopy(result1)
@@ -35,6 +37,20 @@ def merge_results(result1: Results, result2: Results) -> Results:
 
     merged_data = np.vstack([boxes1.data, boxes2.data]) if boxes1.data.size > 0 else boxes2.data
     merged_result.boxes.data = merged_data
+    return merged_result
+
+def merge_results_list(results: list[Results]) -> Results:
+    """
+    Merges the bounding boxes of multiple YOLO results and also updates the class mapping.
+
+    Args:
+        results (list[Results]): List of YOLO results
+
+    Returns:
+        Results: Merged YOLO result containing all bounding boxes from all results and also updated class mapping
+    """
+    merged_result: Results = None
+    for result in results: merged_result = merge_results(merged_result, result)
     return merged_result
 
 def find_key_by_value(dictionary: dict, value: str) -> int:
