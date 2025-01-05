@@ -76,15 +76,15 @@ def filter_results(results: Results, class_filter: list[str] | str) -> Results:
 
 
 def apply_censorship(image: ImageInput, detection_results: Results,
-                     action: Literal["blur", "beam", "image"] = None, color: tuple = (0, 0, 0), overlayImage: ImageInput = (0, 0, 0)) -> np.ndarray:
+                     action: Literal["blur", "beam", "overlay"] = None, color: tuple = (0, 0, 0), overlayImage: ImageInput = (0, 0, 0)) -> np.ndarray:
 
-    def apply_blur_to_bbox(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
+    def apply_blur_to_bbox(**kwargs) -> np.ndarray:
         return cv2.GaussianBlur(crop_image(image, bbox), (25, 25), 0)
 
-    def apply_beam_to_bbox(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
+    def apply_beam_to_bbox(**kwargs) -> np.ndarray:
         return color
 
-    def apply_overlay_to_bbox(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
+    def apply_overlay_to_bbox(**kwargs) -> np.ndarray:
         x1, y1, x2, y2 = bbox.astype("int")
         return cv2.resize(overlayImage, (x2 - x1, y2 - y1))
 
@@ -97,9 +97,9 @@ def apply_censorship(image: ImageInput, detection_results: Results,
     if action not in action_dict: raise ValueError(f"Invalid action: {action}")
 
     image_copy = image.copy()
-    for bbox, _ in zip(detection_results.boxes.xyxy, detection_results.boxes.cls):
+    for bbox in detection_results.boxes.xyxy:
         x1, y1, x2, y2 = bbox.astype("int")
-        modifiedRegion = action_dict[action](image_copy, bbox)
+        modifiedRegion = action_dict[action](image=image, bbox=bbox, x1=x1, y1=y1, x2=x2, y2=y2)
         image_copy[y1:y2, x1:x2] = modifiedRegion
     return image_copy
 
