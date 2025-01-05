@@ -57,9 +57,16 @@ def find_key_by_value(dictionary: dict, value: str) -> int:
     return list(dictionary.keys())[list(dictionary.values()).index(value)]
 
 
-def filter_results(results: Results, class_filter: list[str]|str) -> Results:
+def filter_results(results: Results, class_filter: list[str]|str, confidence_threshold: float = 0) -> Results:
     if type(class_filter) is str: class_filter = [class_filter]
 
     class_filter = [find_key_by_value(results.names, cls) for cls in class_filter]
-    results.boxes.data = np.array([d for d in results.boxes.data if d[-1] in class_filter])
+    filter_results = []
+    for data in results.boxes.data:
+        cls_idx = int(data[5])
+        confidence = data[4]
+        if cls_idx in class_filter and confidence >= confidence_threshold:
+            filter_results.append(data)
+            
+    results.boxes.data = np.array(filter_results)
     return results

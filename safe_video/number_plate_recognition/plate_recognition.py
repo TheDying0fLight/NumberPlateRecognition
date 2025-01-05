@@ -22,10 +22,30 @@ class ObjectDetection():
         self.add_model(os.path.join(os.path.abspath("."), "models", "yolo11n.pt"))
 
     def apply_blur_to_image(self, image: ImageInput, detection_results: Results) -> np.ndarray:
+        def pixelate_region(region, pixel_size=10):
+            height, width = region.shape[:2]
+            
+            # Ensure width and height do not become zero
+            small_width = max(1, width // pixel_size)
+            small_height = max(1, height // pixel_size)
+            
+            # Resize to a smaller size
+            small = cv2.resize(region, (small_width, small_height), interpolation=cv2.INTER_LINEAR)
+            # Scale back to the original size
+            pixelated = cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
+            return pixelated
+        
         image_copy = image.copy()
         for bbox, _ in zip(detection_results.boxes.xyxy, detection_results.boxes.cls):
             cropped_region = self.crop_image(image_copy, bbox)
-            blurred_region = cv2.GaussianBlur(cropped_region, (25, 25), 0)
+            
+            #blurred_region = cv2.GaussianBlur(cropped_region, (25, 25), 0)
+            height, width = cropped_region.shape[:2]
+            kernel_size = max(3, min(height , width))  # Adjust based on size
+            if kernel_size % 2 == 0:  # Kernel size must be odd
+                kernel_size += 1
+            blurred_region = cv2.GaussianBlur(cropped_region, (kernel_size, kernel_size), 0)
+            blurred_region = pixelate_region(blurred_region, pixel_size=10) 
             x1, y1, x2, y2 = bbox.astype("int")
             image_copy[y1:y2, x1:x2] = blurred_region
         return image_copy
