@@ -71,6 +71,7 @@ def filter_results(results: Results, class_filter: list[str]|str, confidence_thr
     if type(class_filter) is str: class_filter = [class_filter]
 
     class_filter = [find_key_by_value(results.names, cls) for cls in class_filter]
+    
     filter_results = []
     for data in results.boxes.data:
         cls_idx = int(data[5])
@@ -78,12 +79,12 @@ def filter_results(results: Results, class_filter: list[str]|str, confidence_thr
         if cls_idx in class_filter and confidence >= confidence_threshold:
             filter_results.append(data)
             
-    results.boxes.data = np.array(filter_results)
+    results.boxes.data = np.array(filter_results) if len(filter_results) > 0 else np.array([])
     return results
 
 
 def apply_censorship(image: ImageInput, detection_results: Results,
-                     action: Literal["blur", "beam", "overlay"] = None, color: tuple = (0, 0, 0), overlayImage: ImageInput = None) -> np.ndarray:
+                     action: Literal["blur", "beam", "overlay"] = "blur", color: tuple = (0, 0, 0), overlayImage: ImageInput = None) -> np.ndarray:
 
     def apply_blur_to_bbox(**kwargs) -> np.ndarray:
             def pixelate_region(region, pixel_size=10):
@@ -123,7 +124,8 @@ def apply_censorship(image: ImageInput, detection_results: Results,
 
     if action not in action_dict: raise ValueError(f"Invalid action: {action}")
     if action == "overlay" and overlayImage is None: raise ValueError("Overlay image must be provided for action 'overlay'")
-
+    if detection_results.boxes.data.size == 0: return image
+    
     image_copy = image.copy()
     for bbox in detection_results.boxes.xyxy:
         x1, y1, x2, y2 = bbox.astype("int")

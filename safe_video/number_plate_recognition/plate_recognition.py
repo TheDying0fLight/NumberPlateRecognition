@@ -20,6 +20,7 @@ class ObjectDetection():
         self.models: list[YOLO] = []
         self.add_model(os.path.join(os.path.abspath("."), "models", "first10ktrain", "weights", "best.pt"))
         self.add_model(os.path.join(os.path.abspath("."), "models", "yolo11n.pt"))
+        self.add_model(os.path.join(os.path.abspath("."), "models", "face_recognition", "weights", "best.pt"))
 
     def add_model(self, path: str):
         model = YOLO(path, task="detect")
