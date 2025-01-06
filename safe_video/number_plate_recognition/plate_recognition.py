@@ -1,16 +1,11 @@
 from .utils import *
-
-from PIL import Image
-from pathlib import Path
 from IPython.display import clear_output
-
 import os
 from ultralytics import YOLO
 import cv2
 from ultralytics.engine.results import Results
 import numpy as np
 import torch
-ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
 
 class ObjectDetection():
@@ -20,7 +15,6 @@ class ObjectDetection():
         self.models: list[YOLO] = []
         self.add_model(os.path.join(os.path.abspath("."), "models", "first10ktrain", "weights", "best.pt"))
         self.add_model(os.path.join(os.path.abspath("."), "models", "yolo11n.pt"))
-        self.add_model(os.path.join(os.path.abspath("."), "models", "face_recognition", "weights", "best.pt"))
 
     def add_model(self, path: str):
         model = YOLO(path, task="detect")
