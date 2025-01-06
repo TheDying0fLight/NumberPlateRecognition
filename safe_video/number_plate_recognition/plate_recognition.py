@@ -56,23 +56,32 @@ class ObjectDetection():
         if not verbose: clear_output()
         return result
 
-    def chain_detection(self, image: ImageInput, class_dicts: list[dict[int, list[int]]], verbose: bool = False) -> Results:
+    def chain_detection(self, image: ImageInput, class_dicts: list[dict[int, list[int]]],
+                        conf_thresh: float = 0, verbose: bool = False) -> Results:
         results = [self.detect_objects(image, class_dicts[0], verbose)]
 
-        for class_dict in class_dicts[1:len(class_dicts)]:
-            results.append(None)
-            for bbox in results[-2].boxes.xyxy:
-                x1, y1, _, _ = bbox.astype("int")
-                cropped_image = crop_image(image, bbox)
-                result = self.detect_objects(cropped_image, class_dict, verbose)
-                if result.boxes.data.size > 0: result.boxes.data[:, :4] += [x1, y1, x1, y1]
+        for class_dict in class_dicts[1:]:
+            names = {}
+            for model_idx, class_indices in class_dict.items():
+                if len(class_indices) == 0: continue
+                names.update(self.models[model_idx].names)
+            results.append(Results(results[-1].orig_img, results[-1].path, names, np.empty((0,6))))
+            results[-2] = filter_results(results[-2], conf_thresh=conf_thresh)
 
-                if results[-1] is None: results[-1] = result
-                else: results[-1] = merge_results(results[-1], result)
+            if results[-2].boxes.data.size > 0:
+                for bbox in results[-2].boxes.xyxy:
+                    x1, y1, _, _ = bbox.astype("int")
+                    cropped_image = crop_image(image, bbox)
+                    result = self.detect_objects(cropped_image, class_dict, verbose)
+                    if result.boxes.data.size > 0: result.boxes.data[:, :4] += [x1, y1, x1, y1]
+
+                    if results[-1] is None: results[-1] = result
+                    else: results[-1] = merge_results(results[-1], result)
+        results[-1] = filter_results(results[-1], conf_thresh=conf_thresh)
         return results
 
     def process_image(self, image: ImageInput, classes: str | list[str | list[str]],
-                      remap_classes: bool = True, verbose: bool = False) -> list[Results]:
+                      remap_classes: bool = True, conf_thresh: float = 0, verbose: bool = False) -> list[Results]:
         if classes is None: raise ValueError("Primary classes must be provided")
         if issubclass(type(classes), str): classes = [classes]
 
@@ -81,10 +90,11 @@ class ObjectDetection():
             for cls in classes:
                 if issubclass(type(cls), str): cls = [cls]
                 self._class_mappings.append(self.map_classes_to_models(cls))
-        return self.chain_detection(image, self._class_mappings, verbose)
+        return self.chain_detection(image, self._class_mappings, conf_thresh, verbose)
 
     def process_video(self, video_path: str, classes: str | list[str | list[str]],
-                      confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1, enable_stream_buffer: bool = False,
+                      confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1,
+                      enable_stream_buffer: bool = False, conf_thresh: float = 0,
                       debug: bool = False, verbose: bool = False):
         def debug_show_video(frame: ImageInput) -> bool:
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
@@ -98,7 +108,7 @@ class ObjectDetection():
             if frame_counter % video_stride != 0:
                 frame_counter += 1
                 continue
-            detections = self.process_image(frame, classes, frame_counter == 0, verbose)
+            detections = self.process_image(frame, classes, frame_counter == 0, conf_thresh, verbose)
 
             # TODO delete later is for testing
             if debug:
