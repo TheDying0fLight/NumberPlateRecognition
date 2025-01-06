@@ -84,7 +84,7 @@ def filter_results(results: Results, class_filter: list[str] | str, confidence_t
 
 
 class Censor:
-    def blur(color, image, **kwargs) -> np.ndarray:
+    def blur(image, **kwargs) -> np.ndarray:
         def pixelate_region(region, pixel_size=10):
             height, width = region.shape[:2]
 
@@ -113,7 +113,6 @@ class Censor:
 def apply_censorship(image: ImageInput, detection_results: Results,
                      action: Callable = Censor.blur, **kwargs) -> np.ndarray:
     if detection_results.boxes.data.size == 0: return image
-
     image_copy = image.copy()
     for bbox in detection_results.boxes.xyxy:
         x1, y1, x2, y2 = bbox.astype("int")
@@ -126,8 +125,3 @@ def crop_image(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
     assert len(bbox) == 4, "Array must have exactly 4 entries"
     x1, y1, x2, y2 = bbox.astype("int")
     return image[y1:y2, x1:x2]
-
-
-def bbox_size(bbox: np.ndarray):
-    x1, y1, x2, y2 = bbox.astype("int")
-    return (x2 - x1, y2 - y1)
