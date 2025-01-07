@@ -61,25 +61,27 @@ class VideoPlayer(ft.Video):
         )
 
 class ModelTile(ft.ExpansionTile):
-    def __init__(self, name, open_closed: dict, active_callback, boundingBox_callback, blur_callback):
+    def __init__(self, name, open_closed: dict, colors: ColorPalette, active_callback, boundingBox_callback, blur_callback):
         def open_close_callback(info):
             open_closed[info.control.key] = info.data
         super().__init__(
-            title=ft.Text(name),
+            title=ft.Text(name, color=colors.text),
             initially_expanded = open_closed[name],
             maintain_state = True,
-            dense = True,
             key=name,
             leading=ft.Checkbox(on_change=active_callback, value=True, key=name),
             shape=ft.StadiumBorder(),
+            expanded_cross_axis_alignment=ft.CrossAxisAlignment.START,
+            controls_padding=5,
             on_change=open_close_callback,
             controls=[
-                ft.TextButton(
-                    "show bounding boxes",
+                ft.OutlinedButton(
+                    content=ft.Column([ft.Text("show bounding boxes", color=colors.text)]),
                     on_click=boundingBox_callback,
                     key=name),
-                ft.TextButton(
-                    "blur image",
+                ft.Container(width=1, height=10),
+                ft.OutlinedButton(
+                    content=ft.Column([ft.Text("blur image", color=colors.text)]),
                     on_click=blur_callback,
                     key=name),
                 ])
