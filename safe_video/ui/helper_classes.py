@@ -11,7 +11,7 @@ import numpy as np
 
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
 from .components import ModelTile
-from safe_video.number_plate_recognition import ObjectDetection
+from safe_video.number_plate_recognition import ObjectDetection, Censor, apply_censorship
 from ultralytics.engine.results import Results
 
 class ModelManager():
@@ -37,12 +37,13 @@ class ModelManager():
 
     def get_blurred_fig(self, cls_id, img: Image):
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
-        plot = self.detection.blur_image(img_loaded, self.analyze_or_from_cache(cls_id, img), [cls_id])
+        plot = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
         hight, length = np.shape(plot)[0:2]
         scale = 10/min(length, hight)
-        fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.imshow(plot)
+        with warnings.catch_warnings(action="ignore"):
+            fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
+            ax = fig.add_axes([0, 0, 1, 1])
+            ax.imshow(plot)
         return fig
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> Results:
@@ -51,7 +52,7 @@ class ModelManager():
         if not img.id in self.results[cls_id]:
             img_loaded = cv2.imread(img.get_path(Version.ORIG))
             img_loaded = img_loaded[:, :, ::-1]
-            self.results[cls_id][img.id] = self.detection.analyze(img_loaded, [cls_id])
+            self.results[cls_id][img.id] = self.detection.process_image(img_loaded, cls_id, conf_thresh=0.25)[0]
         return self.results[cls_id][img.id]
 
 
