@@ -45,20 +45,20 @@ class ObjectDetection():
         if len(classes) == classes_len: raise ValueError("No classes found for any model")
         return model_class_dict
 
-    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], conf_thresh: float = 0, verbose: bool = False) -> Results:
+    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], confidence_threshold: float = 0.25, augment: bool = False, verbose: bool = False) -> Results:
         # detect and combine results
         result = None
         for model_idx, class_indices in model_class_dict.items():
             if len(class_indices) == 0: continue
-            detection_results = self.models[model_idx](image, classes=class_indices, conf=conf_thresh)[0].cpu().numpy()
+            detection_results = self.models[model_idx](image, classes=class_indices, conf=confidence_threshold, augment = augment, half = True)[0].cpu().numpy()
             if result is None: result = detection_results
             else: result = merge_results(result, detection_results)
         if not verbose: clear_output()
         return result
 
     def chain_detection(self, image: ImageInput, class_dicts: list[dict[int, list[int]]],
-                        conf_thresh: float = 0, verbose: bool = False) -> Results:
-        results = [self.detect_objects(image, class_dicts[0], conf_thresh, verbose)]
+                        confidence_threshold: float = 0.25, augment: bool = False, verbose: bool = False) -> Results:
+        results = [self.detect_objects(image, class_dicts[0], confidence_threshold, verbose)]
 
         for class_dict in class_dicts[1:]:
             names = {}
@@ -71,7 +71,7 @@ class ObjectDetection():
                 for bbox in results[-2].boxes.xyxy:
                     x1, y1, _, _ = bbox.astype("int")
                     cropped_image = crop_image(image, bbox)
-                    result = self.detect_objects(cropped_image, class_dict, conf_thresh, verbose)
+                    result = self.detect_objects(cropped_image, class_dict, confidence_threshold, augment = augment, verbose = verbose)
                     if result.boxes.data.size > 0: result.boxes.data[:, :4] += [x1, y1, x1, y1]
 
                     if results[-1] is None: results[-1] = result
@@ -79,7 +79,7 @@ class ObjectDetection():
         return results
 
     def process_image(self, image: ImageInput, classes: str | list[str | list[str]],
-                      remap_classes: bool = True, conf_thresh: float = 0, verbose: bool = False) -> list[Results]:
+                      remap_classes: bool = True, confidence_threshold: float = 0.25, augment: bool = False,verbose: bool = False) -> list[Results]:
         if classes is None: raise ValueError("Primary classes must be provided")
         if issubclass(type(classes), str): classes = [classes]
 
@@ -88,11 +88,11 @@ class ObjectDetection():
             for cls in classes:
                 if issubclass(type(cls), str): cls = [cls]
                 self._class_mappings.append(self.map_classes_to_models(cls))
-        return self.chain_detection(image, self._class_mappings, conf_thresh, verbose)
+        return self.chain_detection(image, self._class_mappings, confidence_threshold, augment, verbose)
 
     def process_video(self, video_path: str, classes: str | list[str | list[str]],
-                      confidence_threshold: float = 0.5, iou_threshold: float = 0.7, video_stride: int = 1,
-                      enable_stream_buffer: bool = False, conf_thresh: float = 0,
+                      confidence_threshold: float = 0.25, iou_threshold: float = 0.7, video_stride: int = 1,
+                      enable_stream_buffer: bool = False, augment: bool = False,
                       debug: bool = False, verbose: bool = False):
         def debug_show_video(frame: ImageInput) -> bool:
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
@@ -106,11 +106,15 @@ class ObjectDetection():
             if frame_counter % video_stride != 0:
                 frame_counter += 1
                 continue
-            detections = self.process_image(frame, classes, frame_counter == 0, conf_thresh, verbose)
+            detections = self.process_image(frame, classes, frame_counter == 0, confidence_threshold, augment ,verbose)
 
             # TODO delete later is for testing
             if debug:
                 frame = merge_results_list(detections).plot()
+                #detections = merge_results_list(detections)
+                #detections = filter_results(detections, "License_Plate", confidence_threshold)        
+                #frame = merge_results_list(detections).plot()                
+                #frame = apply_censorship(frame, detections, Censor.blur)
                 if debug_show_video(frame): break
             frame_counter += 1
 
