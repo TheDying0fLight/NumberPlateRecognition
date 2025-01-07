@@ -119,7 +119,7 @@ class UI_App:
 
     def update(self):
         self.tiles.controls = [
-            ModelTile(c, self.tiles_open_closed, self.colors,
+            ModelTile(c, self.tiles_open_closed,
             active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
             boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
             blur_callback=lambda info: self.show_blurred_img(info.control.key),
