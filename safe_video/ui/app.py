@@ -1,8 +1,10 @@
 import flet as ft
 from safe_video.number_plate_recognition import ObjectDetection
-from .dataclasses import Video, Image, ColorPalette
+from .dataclasses import Video, Image, ColorPalette, Version
 from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile
 from .helper_classes import FileManger, ModelManager
+from flet.matplotlib_chart import MatplotlibChart
+import base64
 
 DarkColors = ColorPalette(
     normal = "#1a1e26",
@@ -24,9 +26,11 @@ class UI_App:
         self.selected = set()
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
+        self.tiles_open_closed = {cls: False for cls in self.model_manager.cls}
+        self.tiles: ft.ListView = ft.ListView([], expand=True)
 
-    def blur_callback(self):
-        self.npr.blur_image()
+    def blur_all_callback(self):
+        print('blur_all')
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
@@ -40,10 +44,10 @@ class UI_App:
         if len(ids) == 0: return
         for id in ids:
             media = self.file_manager[id]
-            media.preview_container = PreviewImage(media.id, media.get_path_icon(), self.switch_image_callback, select_color=self.colors.selected, video=(type(media) == Video))
+            media.preview_container = PreviewImage(media.id, media.get_path(Version.ICON), self.switch_image_callback, select_color=self.colors.selected, video=(type(media) == Video))
             self.preview_bar.controls.append(media.preview_container)
         self.switch_image(ids[-1])
-        self.page.update()
+        self.update()
 
     def switch_image(self, id: str):
         if self.selected_img is not None:
@@ -64,7 +68,7 @@ class UI_App:
             if type(media) is Video:
                 self.media_container.content = VideoPlayer(media.get_path_preview(), media.aspect_ratio, colors=self.colors)
                 # TODO: set player to current position
-        self.page.update()
+        self.update()
 
     def switch_image_callback(self, info: ft.ControlEvent):
         name = info.control.key
@@ -78,9 +82,7 @@ class UI_App:
             self.close_image(img.id)
 
     def close_image(self, name):
-        print(len(self.preview_bar.controls))
         self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
-        print(len(self.preview_bar.controls))
         self.selected_img = None
         del self.file_manager[name]
         self.switch_image(list(self.file_manager.keys())[0] if len(self.file_manager) >= 1 else '')
@@ -98,17 +100,31 @@ class UI_App:
                 save_callback=save_callback,
                 close_callback=lambda: self.close_image(img.id)
             ))
-    
+
     def show_bounding_boxes(self, model_id):
-        print(model_id)
-        fig = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_img].get_path_preview())
-        self.page.add(ft.MatplotlibChart(fig, expand=True))
+        fig = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_img])
+        self.media_container.content = MatplotlibChart(fig, expand=True)
+        self.update()
+
+    def show_blurred_img(self, model_id):
+        fig = self.model_manager.get_blurred_fig(model_id, self.file_manager[self.selected_img])
+        self.media_container.content = MatplotlibChart(fig, expand=True)
+        self.update()
 
     def add_model_callback(self, info):
         print('add model')
 
     def settings_callback(self, info: ft.ControlEvent):
         print('TODO: Settings')
+
+    def update(self):
+        self.tiles.controls = [
+            ModelTile(c, self.tiles_open_closed,
+            active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
+            boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
+            blur_callback=lambda info: self.show_blurred_img(info.control.key),
+            ) for c in self.model_manager.cls]
+        self.page.update()
 
     def build_page(self, page: ft.Page):
         self.page = page
@@ -127,17 +143,19 @@ class UI_App:
                     allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
                 ft.ElevatedButton("Export file", color=self.colors.text, on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_img].get_orig_name()), icon=ft.icons.SAVE_ALT),
                 ft.ElevatedButton("Close file", color=self.colors.text, on_click=self.close_callback, icon=ft.icons.DELETE),
-                ft.ElevatedButton("Blur all", color=self.colors.text, on_click=lambda _: self.blur_callback(), icon=ft.icons.PLAY_ARROW),
+                ft.VerticalDivider(width=9, thickness=1, color=self.colors.background),
+                ft.ElevatedButton("Show all bounding boxes", color=self.colors.text, on_click=lambda _: self.blur_all_callback(), icon=ft.icons.PLAY_ARROW),
+                ft.ElevatedButton("Blur all", color=self.colors.text, on_click=lambda _: self.blur_all_callback(), icon=ft.icons.PLAY_ARROW),
                 ft.Row([], expand=True),
                 ft.IconButton(on_click=self.settings_callback, icon=ft.icons.SETTINGS)
-            ]), padding=10, bgcolor=self.colors.dark),
+            ]), padding=10, height=60, bgcolor=self.colors.dark),
             ft.Row([
                 ft.Container(self.preview_bar, bgcolor=self.colors.normal, padding=10, width=70),
                 self.media_container,
                 ft.Container(ft.Column([
-                    ft.ListView(self.model_manager.get_tiles(), expand=True),
+                    self.tiles,
                     ft.Container(ft.Row([ft.TextButton(
-                        'Add new model',
+                        'Add new class',
                         icon=ft.icons.ADD,
                         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20),
                         expand=True,
@@ -147,6 +165,7 @@ class UI_App:
         )
         names = self.file_manager.load_cached()
         self.load_images(names)
+        self.update()
 
     def run(self):
         ft.app(target=self.build_page)

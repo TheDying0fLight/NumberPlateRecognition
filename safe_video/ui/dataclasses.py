@@ -1,43 +1,53 @@
-from dataclasses import dataclass
-from .components import PreviewImage
+from dataclasses import dataclass, field
+from enum import Flag, auto
+
 
 @dataclass
 class FileVersion:
     name: str
     fmt: str
 
+
 @dataclass
 class FileVersionTemplate:
     name: str
-    fmt: str|None = None
-    max_size: int|None = None
+    fmt: str | None = None
+    max_size: int | None = None
+
+class Version(Flag):
+    ORIG = auto()
+    PREVIEW = auto()
+    ICON = auto()
+    BLUR_ORIG = auto()
+    BLUR_PREVIEW = auto()
+
 
 @dataclass
 class Media:
-    id: str # name + number to make it unique
+    id: str  # name + number to make it unique
     cache_path: str
     name: str
-    orig_file: FileVersion
-    preview_file: FileVersion
-    icon_file: FileVersion
+    files: dict[Version, FileVersion] = field(default_factory=lambda: {v: None for v in Version})
     saved: bool = False
     has_to_be_closed: bool = False
-    preview_container: PreviewImage = None
+    current_preview: Version = Version.PREVIEW
+    preview_container = None
 
-    def get_path_orig(self):
-        return f'{self.cache_path}{self.id}/{self.orig_file.name}.{self.orig_file.fmt}'
+    def set_file(self, version: Version, file: FileVersion):
+        self.files[version] = file
+
+    def get_path(self, version: Version):
+        return f'{self.cache_path}{self.id}/{self.files[version].name}.{self.files[version].fmt}'
 
     def get_path_preview(self):
-        return f'{self.cache_path}{self.id}/{self.preview_file.name}.{self.preview_file.fmt}'
-
-    def get_path_icon(self):
-        return f'{self.cache_path}{self.id}/{self.icon_file.name}.{self.icon_file.fmt}'
+        return self.get_path(self.current_preview)
 
     def get_orig_name(self):
-        return f'{self.name}.{self.orig_file.fmt}'
+        return f'{self.name}.{self.files[Version.ORIG].fmt}'
 
     def selected(self, selected: bool):
-        if self.preview_container is None: return
+        if self.preview_container is None:
+            return
         self.preview_container.toggle_selected(selected)
 
 
@@ -51,6 +61,7 @@ class Video(Media):
         self.aspect_ratio: float = aspect_ratio
         self.position: float = 0
         super().__init__(*media.__dict__.values())
+
 
 @dataclass
 class ColorPalette:

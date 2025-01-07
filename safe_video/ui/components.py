@@ -1,4 +1,5 @@
 import flet as ft
+from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
 
 
 class PreviewImage(ft.Stack):
@@ -60,14 +61,25 @@ class VideoPlayer(ft.Video):
         )
 
 class ModelTile(ft.ExpansionTile):
-    def __init__(self, name, active_callback, boundingBox_callback):
+    def __init__(self, name, open_closed: dict, active_callback, boundingBox_callback, blur_callback):
+        def open_close_callback(info):
+            open_closed[info.control.key] = info.data
         super().__init__(
             title=ft.Text(name),
+            initially_expanded = open_closed[name],
+            maintain_state = True,
+            dense = True,
             key=name,
             leading=ft.Checkbox(on_change=active_callback, value=True, key=name),
             shape=ft.StadiumBorder(),
-            controls=[ft.TextButton(
-                "show bounding boxes",
-                on_click=boundingBox_callback,
-                key=name
-            )])
+            on_change=open_close_callback,
+            controls=[
+                ft.TextButton(
+                    "show bounding boxes",
+                    on_click=boundingBox_callback,
+                    key=name),
+                ft.TextButton(
+                    "blur image",
+                    on_click=blur_callback,
+                    key=name),
+                ])
