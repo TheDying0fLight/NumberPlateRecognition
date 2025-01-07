@@ -85,7 +85,7 @@ def filter_results(results: Results, class_filter: list[str] | str = None, conf_
 
 
 class Censor:
-    def blur(image, **kwargs) -> np.ndarray:
+    def blur(image: np.ndarray, **kwargs) -> np.ndarray:
         def pixelate_region(region, pixel_size=10):
             height, width = region.shape[:2]
 
@@ -106,9 +106,10 @@ class Censor:
         blurred_region = cv2.GaussianBlur(blurred_region, (kernel_size, kernel_size), 0)
         return blurred_region
 
-    def solid(color, **kwargs) -> np.ndarray: return color
+    def solid(color: tuple, **kwargs) -> np.ndarray: return color
 
-    def overlay(overlayImage, image, **kwargs) -> np.ndarray: return cv2.resize(overlayImage, image.shape[:2][::-1])
+    def overlay(image: np.ndarray, overlayImage: np.ndarray, **kwargs) -> np.ndarray:
+        return cv2.resize(overlayImage, image.shape[:2][::-1])
 
 
 def apply_censorship(image: ImageInput, detection_results: Results,
