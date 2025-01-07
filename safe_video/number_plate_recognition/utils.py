@@ -40,10 +40,13 @@ def merge_results(result1: Results, result2: Results) -> Results:
             merged_result.names[current_max_class_idx] = class_name2
 
     # remap classes in second results
-    for i, class_id in enumerate(boxes2.data[:, -1]):
-        boxes2.data[i, -1] = updated_class_mapping[int(class_id)]
+    if boxes2.data.size > 0:
+        for i, class_id in enumerate(boxes2.data[:, -1]):
+            boxes2.data[i, -1] = updated_class_mapping[int(class_id)]
 
-    merged_data = np.vstack([boxes1.data, boxes2.data]) if boxes1.data.size > 0 else boxes2.data
+    if boxes1.data.size > 0 and boxes2.data.size > 0: merged_data = np.vstack([boxes1.data, boxes2.data])
+    elif boxes1.data.size > 0: merged_data = boxes1.data
+    else: merged_data = boxes2.data
     merged_result.boxes.data = merged_data
     return merged_result
 
@@ -67,24 +70,22 @@ def find_key_by_value(dictionary: dict, value: str) -> int:
     return list(dictionary.keys())[list(dictionary.values()).index(value)]
 
 
-def filter_results(results: Results, class_filter: list[str] | str, confidence_threshold: float = 0) -> Results:
+def filter_results(results: Results, class_filter: list[str] | str = None, conf_thresh: float = None) -> Results:
     if issubclass(type(class_filter), str): class_filter = [class_filter]
+    results = deepcopy(results)
 
-    class_filter = [find_key_by_value(results.names, cls) for cls in class_filter]
+    if class_filter is not None:
+        class_filter = [find_key_by_value(results.names, cls) for cls in class_filter]
+        results.boxes.data = np.array([res for res in results.boxes.data if res[-1] in class_filter])
 
-    filter_results = []
-    for data in results.boxes.data:
-        cls_idx = int(data[5])
-        confidence = data[4]
-        if cls_idx in class_filter and confidence >= confidence_threshold:
-            filter_results.append(data)
+    if conf_thresh is not None:
+        results.boxes.data = np.array([res for res in results.boxes.data if res[-2] > conf_thresh])
 
-    results.boxes.data = np.array(filter_results) if len(filter_results) > 0 else np.array([])
     return results
 
 
 class Censor:
-    def blur(image, **kwargs) -> np.ndarray:
+    def blur(image: np.ndarray, **kwargs) -> np.ndarray:
         def pixelate_region(region, pixel_size=10):
             height, width = region.shape[:2]
 
@@ -105,9 +106,10 @@ class Censor:
         blurred_region = cv2.GaussianBlur(blurred_region, (kernel_size, kernel_size), 0)
         return blurred_region
 
-    def solid(color, **kwargs) -> np.ndarray: return color
+    def solid(color: tuple, **kwargs) -> np.ndarray: return color
 
-    def overlay(overlayImage, image, **kwargs) -> np.ndarray: return cv2.resize(overlayImage, image.shape[:2][::-1])
+    def overlay(image: np.ndarray, overlayImage: np.ndarray, **kwargs) -> np.ndarray:
+        return cv2.resize(overlayImage, image.shape[:2][::-1])
 
 
 def apply_censorship(image: ImageInput, detection_results: Results,
