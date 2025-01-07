@@ -45,12 +45,12 @@ class ObjectDetection():
         if len(classes) == classes_len: raise ValueError("No classes found for any model")
         return model_class_dict
 
-    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], verbose: bool = False) -> Results:
+    def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], conf_thresh: float = 0, verbose: bool = False) -> Results:
         # detect and combine results
         result = None
         for model_idx, class_indices in model_class_dict.items():
             if len(class_indices) == 0: continue
-            detection_results = self.models[model_idx](image, classes=class_indices)[0].cpu().numpy()
+            detection_results = self.models[model_idx](image, classes=class_indices, conf=conf_thresh)[0].cpu().numpy()
             if result is None: result = detection_results
             else: result = merge_results(result, detection_results)
         if not verbose: clear_output()
@@ -58,26 +58,24 @@ class ObjectDetection():
 
     def chain_detection(self, image: ImageInput, class_dicts: list[dict[int, list[int]]],
                         conf_thresh: float = 0, verbose: bool = False) -> Results:
-        results = [self.detect_objects(image, class_dicts[0], verbose)]
+        results = [self.detect_objects(image, class_dicts[0], conf_thresh, verbose)]
 
         for class_dict in class_dicts[1:]:
             names = {}
             for model_idx, class_indices in class_dict.items():
                 if len(class_indices) == 0: continue
                 names.update(self.models[model_idx].names)
-            results.append(Results(results[-1].orig_img, results[-1].path, names, np.empty((0,6))))
-            results[-2] = filter_results(results[-2], conf_thresh=conf_thresh)
+            results.append(Results(results[-1].orig_img, results[-1].path, names, np.empty((0, 6))))
 
             if results[-2].boxes.data.size > 0:
                 for bbox in results[-2].boxes.xyxy:
                     x1, y1, _, _ = bbox.astype("int")
                     cropped_image = crop_image(image, bbox)
-                    result = self.detect_objects(cropped_image, class_dict, verbose)
+                    result = self.detect_objects(cropped_image, class_dict, conf_thresh, verbose)
                     if result.boxes.data.size > 0: result.boxes.data[:, :4] += [x1, y1, x1, y1]
 
                     if results[-1] is None: results[-1] = result
                     else: results[-1] = merge_results(results[-1], result)
-        results[-1] = filter_results(results[-1], conf_thresh=conf_thresh)
         return results
 
     def process_image(self, image: ImageInput, classes: str | list[str | list[str]],
