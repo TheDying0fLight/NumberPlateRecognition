@@ -3,6 +3,7 @@ import shutil
 import re
 import PIL
 import PIL.Image
+import warnings
 import cv2
 import flet as ft
 from matplotlib import pyplot as plt
@@ -28,9 +29,10 @@ class ModelManager():
         plot = self.analyze_or_from_cache(cls_id, img).plot()
         hight, length = np.shape(plot)[0:2]
         scale = 10/min(length, hight)
-        fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.imshow(plot)
+        with warnings.catch_warnings(action="ignore"):
+            fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
+            ax = fig.add_axes([0, 0, 1, 1])
+            ax.imshow(plot)
         return fig
 
     def get_blurred_fig(self, cls_id, img: Image):
