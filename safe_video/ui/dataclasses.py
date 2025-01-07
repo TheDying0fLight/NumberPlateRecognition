@@ -18,8 +18,8 @@ class Version(Flag):
     ORIG = auto()
     PREVIEW = auto()
     ICON = auto()
-    BLUR_ORIG = auto()
-    BLUR_PREVIEW = auto()
+    ORIG_CENSORED = auto()
+    PREVIEW_CENSORED = auto()
 
 
 @dataclass
@@ -27,7 +27,13 @@ class Media:
     id: str  # name + number to make it unique
     cache_path: str
     name: str
-    files: dict[Version, FileVersion] = field(default_factory=lambda: {v: None for v in Version})
+    files: dict[Version, FileVersion] = field(default_factory=lambda: {
+        Version.ORIG: FileVersion(name='orig', fmt=None),
+        Version.PREVIEW: FileVersion(name='preview', fmt='webp'),
+        Version.ICON: FileVersion(name='icon', fmt='webp'),
+        Version.ORIG_CENSORED: FileVersion(name='orig_censored', fmt=None),
+        Version.PREVIEW_CENSORED: FileVersion(name='preview_censored', fmt='webp'),
+    })
     saved: bool = False
     has_to_be_closed: bool = False
     current_preview: Version = Version.PREVIEW
@@ -35,6 +41,10 @@ class Media:
 
     def set_file(self, version: Version, file: FileVersion):
         self.files[version] = file
+
+    def set_orig_fmt(self, fmt):
+        self.files[Version.ORIG].fmt = fmt
+        self.files[Version.ORIG_CENSORED].fmt = fmt
 
     def get_path(self, version: Version):
         return f'{self.cache_path}{self.id}/{self.files[version].name}.{self.files[version].fmt}'

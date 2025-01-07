@@ -55,10 +55,8 @@ class FileManger(dict[str, Media]):
     def __init__(self, colors: ColorPalette):
         self.CACHE_PATH = "safe_video/upload_cache/"
         self.colors = colors
-        self.ORIGINAL_TEMPLATE = FileVersionTemplate(name='original')
-        self.PREVIEW_TEMPLATE_IMG = FileVersionTemplate(name='preview', fmt='webp', max_size=1000)
-        self.PREVIEW_TEMPLATE_VID = FileVersionTemplate(name='preview', fmt='mp4', max_size=1000)
-        self.ICON_TEMPLATE = FileVersionTemplate(name='icon', fmt='webp', max_size=100)
+        self.PREVIEW_MAX_SIZE = 1000
+        self.ICON_MAX_SIZE = 100
         self.IMAGE_FMTS = ['png', 'jpg', 'jpeg']
         self.VIDEO_FMTS = ['mp4']
         if not os.path.exists(self.CACHE_PATH):
@@ -76,27 +74,22 @@ class FileManger(dict[str, Media]):
             dir_path = f'{self.CACHE_PATH}/{directory}'
             if not os.path.isdir(dir_path): continue
             name, counter = re.findall("(.*)_(\d)+$", directory)[0]
-            orig_fmt, preview_fmt, icon_fmt = '', '', ''
+            media = Media(id=directory, cache_path=self.CACHE_PATH, name=name)
             for file in os.listdir(dir_path):
                 file_name, fmt = re.findall("(.*)\.(.*)$", file)[0]
-                if file_name == self.ORIGINAL_TEMPLATE.name:
-                    orig_fmt = fmt
-                elif file_name == self.PREVIEW_TEMPLATE_IMG.name:
-                    preview_fmt = fmt
-                elif file_name == self.ICON_TEMPLATE.name:
-                    icon_fmt = fmt
-                else:
-                    print(f'Found unexpected file {file} in directory {directory} in cache. TODO: Handle this')
-            if orig_fmt != '' and preview_fmt != '' and directory not in self:
-                media = Media(id=directory, cache_path=self.CACHE_PATH, name=name)
-                media.set_file(Version.ORIG, FileVersion(self.ORIGINAL_TEMPLATE.name, fmt=orig_fmt))
-                media.set_file(Version.PREVIEW, FileVersion(self.PREVIEW_TEMPLATE_IMG.name, fmt=preview_fmt))
-                media.set_file(Version.ICON, FileVersion(self.ICON_TEMPLATE.name, fmt=icon_fmt))
-                ids.append(directory)
-                if orig_fmt in self.IMAGE_FMTS:
+                for version in Version:
+                    if file_name == media.files[version].name:
+                        media.files[version].fmt = fmt
+                # TODO: Check if all files are there and no other files are in the directory
+            media.set_orig_fmt(media.files[Version.ORIG].fmt)
+            print(directory, self)
+            if media.files[Version.ORIG].fmt is not None and directory not in self:
+                if media.files[Version.ORIG].fmt in self.IMAGE_FMTS:
                     self.__setitem__(directory, Image(media))
-                if orig_fmt in self.VIDEO_FMTS:
+                if media.files[Version.ORIG].fmt in self.VIDEO_FMTS:
                     self.__setitem__(directory, Video(media, self.__get_aspect_ratio(media.get_path(Version.ORIG))))
+                else: continue
+                ids.append(directory)
             else:
                 print(f'Found directory {directory} with not enough files to be valid in cache. TODO: Handle this')
         return ids
@@ -119,13 +112,11 @@ class FileManger(dict[str, Media]):
             counter += 1
         os.makedirs(new_folder.format(counter))
         media = Media(id=f'{name}_{counter}', cache_path=self.CACHE_PATH, name=name)
-        media.set_file(Version.ORIG, FileVersion(self.ORIGINAL_TEMPLATE.name, fmt=fmt))
-        media.set_file(Version.PREVIEW, FileVersion(self.PREVIEW_TEMPLATE_IMG.name, fmt=self.PREVIEW_TEMPLATE_IMG.fmt))
-        media.set_file(Version.ICON, FileVersion(self.ICON_TEMPLATE.name, fmt=self.ICON_TEMPLATE.fmt))
+        media.set_orig_fmt(fmt)
         shutil.copy(old_path, media.get_path(Version.ORIG))
         if fmt in self.IMAGE_FMTS:
-            self.create_new_version_of_image(media.get_path(Version.ORIG), media.get_path(Version.PREVIEW), self.PREVIEW_TEMPLATE_IMG)
-            self.create_new_version_of_image(media.get_path(Version.ORIG), media.get_path(Version.ICON), self.ICON_TEMPLATE)
+            self.__create_new_version_of_image(media.get_path(Version.ORIG), media.get_path(Version.PREVIEW), self.PREVIEW_MAX_SIZE)
+            self.__create_new_version_of_image(media.get_path(Version.ORIG), media.get_path(Version.ICON), self.ICON_MAX_SIZE)
             self.__setitem__(media.id, Image(media))
         elif fmt in self.VIDEO_FMTS:
             #media.preview_file.fmt = media.orig_file.fmt # TODO: change this
@@ -133,22 +124,20 @@ class FileManger(dict[str, Media]):
             self.__setitem__(media.id, Video(media, self.__get_aspect_ratio(media.get_path(Version.ORIG))))
         return media.id
 
-    def create_new_version_of_image(self, orig_path: str, new_path: str, template: FileVersionTemplate):
+    def __create_new_version_of_image(self, orig_path: str, new_path: str, max_size: int):
         img = PIL.Image.open(orig_path)
         width, height = img.size
-        if max(width, height) > template.max_size:
-            scale = template.max_size/max(width, height)
+        if max(width, height) > max_size:
+            scale = max_size/max(width, height)
             img = img.resize((int(width*scale), int(height*scale)))
         img.save(new_path, optimize=True, quality=90)
 
     def create_blur_imgs(self, id, blur_result):
         img = self.__getitem__(id)
         censored_img = PIL.Image.fromarray(blur_result)
-        img.set_file(Version.BLUR_ORIG, FileVersion('blur', img.files[Version.ORIG].fmt))
-        censored_img.save(img.get_path(Version.BLUR_ORIG))
-        img.set_file(Version.BLUR_PREVIEW, FileVersion('blur_preview', self.PREVIEW_TEMPLATE_IMG.fmt))
-        self.create_new_version_of_image(img.get_path(Version.BLUR_ORIG), img.get_path(Version.BLUR_PREVIEW), self.PREVIEW_TEMPLATE_IMG)
-        img.current_preview = Version.BLUR_PREVIEW
+        censored_img.save(img.get_path(Version.ORIG_CENSORED))
+        self.__create_new_version_of_image(img.get_path(Version.ORIG_CENSORED), img.get_path(Version.PREVIEW_CENSORED), self.PREVIEW_MAX_SIZE)
+        img.current_preview = Version.PREVIEW_CENSORED
 
     def __create_preview_and_icon_from_video(self, orig_path: str, preview_path: str, icon_path: str):
         shutil.copy(orig_path, preview_path)
@@ -157,8 +146,8 @@ class FileManger(dict[str, Media]):
         cv2.imwrite(icon_path, image)
         img = PIL.Image.open(icon_path)
         width, height = img.size
-        if max(width, height) > self.PREVIEW_TEMPLATE_IMG.max_size:
-            scale = self.PREVIEW_TEMPLATE_IMG.max_size/max(width, height)
+        if max(width, height) > self.PREVIEW_MAX_SIZE:
+            scale = self.PREVIEW_MAX_SIZE/max(width, height)
             img = img.resize((int(width*scale), int(height*scale)))
         img.save(icon_path, optimize=True, quality=90)
 
@@ -171,7 +160,7 @@ class FileManger(dict[str, Media]):
 
     def export_image(self, id: str, export_path: str):
         img = self.__getitem__(id)
-        newest_version = Version.ORIG if img.files[Version.BLUR_ORIG] is None else Version.BLUR_ORIG
+        newest_version = Version.ORIG if img.files[Version.ORIG_CENSORED] is None else Version.ORIG_CENSORED
         if '.' not in export_path:
             export_path += '.' + img.files[newest_version].fmt
         shutil.copy(img.get_path(newest_version), export_path)
