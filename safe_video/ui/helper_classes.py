@@ -35,16 +35,10 @@ class ModelManager():
             ax.imshow(plot)
         return fig
 
-    def get_blurred_fig(self, cls_id, img: Image):
+    def get_blurred_img(self, cls_id, img: Image):
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
-        plot = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
-        hight, length = np.shape(plot)[0:2]
-        scale = 10/min(length, hight)
-        with warnings.catch_warnings(action="ignore"):
-            fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
-            ax = fig.add_axes([0, 0, 1, 1])
-            ax.imshow(plot)
-        return fig
+        censored_img = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
+        return censored_img
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> Results:
         if cls_id not in self.results:
@@ -147,6 +141,15 @@ class FileManger(dict[str, Media]):
             img = img.resize((int(width*scale), int(height*scale)))
         img.save(new_path, optimize=True, quality=90)
 
+    def create_blur_imgs(self, id, blur_result):
+        img = self.__getitem__(id)
+        censored_img = PIL.Image.fromarray(blur_result)
+        img.set_file(Version.BLUR_ORIG, FileVersion('blur', img.files[Version.ORIG].fmt))
+        censored_img.save(img.get_path(Version.BLUR_ORIG))
+        img.set_file(Version.BLUR_PREVIEW, FileVersion('blur_preview', self.PREVIEW_TEMPLATE_IMG.fmt))
+        self.create_new_version_of_image(img.get_path(Version.BLUR_ORIG), img.get_path(Version.BLUR_PREVIEW), self.PREVIEW_TEMPLATE_IMG)
+        img.current_preview = Version.BLUR_PREVIEW
+
     def __create_preview_and_icon_from_video(self, orig_path: str, preview_path: str, icon_path: str):
         shutil.copy(orig_path, preview_path)
         video = cv2.VideoCapture(orig_path)
@@ -168,9 +171,10 @@ class FileManger(dict[str, Media]):
 
     def export_image(self, id: str, export_path: str):
         img = self.__getitem__(id)
+        newest_version = Version.ORIG if img.files[Version.BLUR_ORIG] is None else Version.BLUR_ORIG
         if '.' not in export_path:
-            export_path += '.' + img.files[Version.ORIG].fmt
-        shutil.copy(img.get_path(Version.ORIG), export_path)
+            export_path += '.' + img.files[newest_version].fmt
+        shutil.copy(img.get_path(newest_version), export_path)
         img.saved = True
 
     def __delitem__(self, id: str):

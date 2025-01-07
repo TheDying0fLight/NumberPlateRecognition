@@ -107,8 +107,9 @@ class UI_App:
         self.update()
 
     def show_blurred_img(self, model_id):
-        fig = self.model_manager.get_blurred_fig(model_id, self.file_manager[self.selected_img])
-        self.media_container.content = MatplotlibChart(fig, expand=True)
+        censored_img = self.model_manager.get_blurred_img(model_id, self.file_manager[self.selected_img])
+        self.file_manager.create_blur_imgs(self.selected_img, censored_img)
+        self.media_container.content = ft.Image(self.file_manager[self.selected_img].get_path_preview(), fit=ft.ImageFit.CONTAIN)
         self.update()
 
     def add_model_callback(self, info):
