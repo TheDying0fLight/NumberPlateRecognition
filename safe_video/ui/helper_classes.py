@@ -35,10 +35,11 @@ class ModelManager():
             ax.imshow(plot)
         return fig
 
-    def get_blurred_img(self, cls_id, img: Image):
+    def get_blurred_as_list(self, cls_ids: str, img: Image):
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
-        censored_img = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
-        return censored_img
+        for cls_id in cls_ids:
+            img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
+        return img_loaded
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> Results:
         if cls_id not in self.results:
@@ -59,6 +60,7 @@ class FileManger(dict[str, Media]):
         self.ICON_MAX_SIZE = 100
         self.IMAGE_FMTS = ['png', 'jpg', 'jpeg']
         self.VIDEO_FMTS = ['mp4']
+        self.blur_orig = True
         if not os.path.exists(self.CACHE_PATH):
             os.makedirs(self.CACHE_PATH)
         super().__init__()
@@ -82,11 +84,10 @@ class FileManger(dict[str, Media]):
                         media.files[version].fmt = fmt
                 # TODO: Check if all files are there and no other files are in the directory
             media.set_orig_fmt(media.files[Version.ORIG].fmt)
-            print(directory, self)
             if media.files[Version.ORIG].fmt is not None and directory not in self:
                 if media.files[Version.ORIG].fmt in self.IMAGE_FMTS:
                     self.__setitem__(directory, Image(media))
-                if media.files[Version.ORIG].fmt in self.VIDEO_FMTS:
+                elif media.files[Version.ORIG].fmt in self.VIDEO_FMTS:
                     self.__setitem__(directory, Video(media, self.__get_aspect_ratio(media.get_path(Version.ORIG))))
                 else: continue
                 ids.append(directory)
@@ -132,7 +133,7 @@ class FileManger(dict[str, Media]):
             img = img.resize((int(width*scale), int(height*scale)))
         img.save(new_path, optimize=True, quality=90)
 
-    def create_blur_imgs(self, id, blur_result):
+    def create_blurred_imgs(self, id, blur_result):
         img = self.__getitem__(id)
         censored_img = PIL.Image.fromarray(blur_result)
         censored_img.save(img.get_path(Version.ORIG_CENSORED))
@@ -157,6 +158,8 @@ class FileManger(dict[str, Media]):
         height, width, _ = image.shape
         return(width/height)
 
+    def toggle_blur_orig(self):
+        self.blur_orig = not self.blur_orig
 
     def export_image(self, id: str, export_path: str):
         img = self.__getitem__(id)

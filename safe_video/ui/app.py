@@ -22,15 +22,11 @@ class UI_App:
         self.page: ft.Page = None
         self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
-        self.selected_img: str = None
-        self.selected = set()
+        self.selected_media: str = None
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
-
-    def blur_all_callback(self):
-        print('blur_all')
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
@@ -50,17 +46,17 @@ class UI_App:
         self.update()
 
     def switch_image(self, id: str):
-        if self.selected_img is not None:
-            if id == self.selected_img: return
-            media = self.file_manager[self.selected_img]
+        if self.selected_media is not None:
+            if id == self.selected_media: return
+            media = self.file_manager[self.selected_media]
             media.selected(False)
             if type(media) is Video:
                 media.position = self.media_container.content.get_current_position()
         if id not in self.file_manager: # image was probably deleted
-            self.selected_img = None
+            self.selected_media = None
             self.media_container.content = None
         else:
-            self.selected_img = id
+            self.selected_media = id
             media = self.file_manager[id]
             media.selected(True)
             if type(media) is Image:
@@ -76,20 +72,20 @@ class UI_App:
 
     def export_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.path is None: return
-        img = self.file_manager[self.selected_img]
+        img = self.file_manager[self.selected_media]
         self.file_manager.export_image(img.id, file_results.path)
         if img.has_to_be_closed:
             self.close_image(img.id)
 
     def close_image(self, name):
         self.preview_bar.controls = [c for c in self.preview_bar.controls if c.key != name]
-        self.selected_img = None
+        self.selected_media = None
         del self.file_manager[name]
         self.switch_image(list(self.file_manager.keys())[0] if len(self.file_manager) >= 1 else '')
 
     def close_callback(self, info: ft.ControlEvent):
-        if self.selected_img is None: return
-        img = self.file_manager[self.selected_img]
+        if self.selected_media is None: return
+        img = self.file_manager[self.selected_media]
         def save_callback():
             self.file_picker_export.save_file(file_name=img.get_orig_name())
             img.has_to_be_closed = True
@@ -102,14 +98,28 @@ class UI_App:
             ))
 
     def show_bounding_boxes(self, model_id):
-        fig = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_img])
+        fig = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_media])
         self.media_container.content = MatplotlibChart(fig, expand=True)
         self.update()
 
-    def show_blurred_img(self, model_id):
-        censored_img = self.model_manager.get_blurred_img(model_id, self.file_manager[self.selected_img])
-        self.file_manager.create_blur_imgs(self.selected_img, censored_img)
-        self.media_container.content = ft.Image(self.file_manager[self.selected_img].get_path_preview(), fit=ft.ImageFit.CONTAIN)
+    def blur_img(self, img: Image, cls_ids: list[str]):
+        censored_img = self.model_manager.get_blurred_as_list(cls_ids, img)
+        self.file_manager.create_blurred_imgs(img.id, censored_img)
+
+    def blur_current_img_callback(self, cls_id):
+        self.blur_img(self.file_manager[self.selected_media], [cls_id])
+        self.media_container.content = ft.Image(self.file_manager[self.selected_media].get_path_preview(), fit=ft.ImageFit.CONTAIN)
+        self.update()
+
+    def blur_all_callback(self):
+        for img in self.file_manager.values():
+            if type(img) is not Image: continue
+            self.blur_img(img, [cls_id for cls_id in self.model_manager.cls if self.model_manager.active[cls_id]])
+        self.media_container.content = ft.Image(self.file_manager[self.selected_media].get_path_preview(), fit=ft.ImageFit.CONTAIN)
+        self.update()
+
+    def toggle_blur_orig(self):
+        self.file_manager
         self.update()
 
     def add_model_callback(self, info):
@@ -123,7 +133,7 @@ class UI_App:
             ModelTile(c, self.tiles_open_closed, self.colors,
             active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
             boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
-            blur_callback=lambda info: self.show_blurred_img(info.control.key),
+            blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
             ) for c in self.model_manager.cls]
         self.page.update()
 
@@ -142,11 +152,11 @@ class UI_App:
                     file_type=ft.FilePickerFileType.CUSTOM,
                     allowed_extensions = self.file_manager.IMAGE_FMTS + self.file_manager.VIDEO_FMTS,
                     allow_multiple=True), icon=ft.icons.FOLDER_OPEN),
-                ft.ElevatedButton("Export file", color=self.colors.text, on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_img].get_orig_name()), icon=ft.icons.SAVE_ALT),
+                ft.ElevatedButton("Export file", color=self.colors.text, on_click=lambda _: self.file_picker_export.save_file(file_name=self.file_manager[self.selected_media].get_orig_name()), icon=ft.icons.SAVE_ALT),
                 ft.ElevatedButton("Close file", color=self.colors.text, on_click=self.close_callback, icon=ft.icons.DELETE),
                 ft.VerticalDivider(width=9, thickness=1, color=self.colors.background),
-                ft.ElevatedButton("Show all bounding boxes", color=self.colors.text, on_click=lambda _: self.blur_all_callback(), icon=ft.icons.PLAY_ARROW),
                 ft.ElevatedButton("Blur all", color=self.colors.text, on_click=lambda _: self.blur_all_callback(), icon=ft.icons.PLAY_ARROW),
+                ft.Switch(active_color=self.colors.text, value=True, on_change=self.toggle_blur_orig),
                 ft.Row([], expand=True),
                 ft.IconButton(on_click=self.settings_callback, icon=ft.icons.SETTINGS)
             ]), padding=10, height=60, bgcolor=self.colors.dark),

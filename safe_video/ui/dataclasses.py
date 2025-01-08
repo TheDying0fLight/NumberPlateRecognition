@@ -28,10 +28,10 @@ class Media:
     cache_path: str
     name: str
     files: dict[Version, FileVersion] = field(default_factory=lambda: {
-        Version.ORIG: FileVersion(name='orig', fmt=None),
+        Version.ORIG: FileVersion(name='original', fmt=None),
         Version.PREVIEW: FileVersion(name='preview', fmt='webp'),
         Version.ICON: FileVersion(name='icon', fmt='webp'),
-        Version.ORIG_CENSORED: FileVersion(name='orig_censored', fmt=None),
+        Version.ORIG_CENSORED: FileVersion(name='original_censored', fmt=None),
         Version.PREVIEW_CENSORED: FileVersion(name='preview_censored', fmt='webp'),
     })
     saved: bool = False
