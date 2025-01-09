@@ -98,6 +98,7 @@ class ObjectDetection():
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
             return cv2.waitKey(1) & 0xFF == ord('q')
 
+        detections_in_frames = []
         cap = cv2.VideoCapture(video_path)
         frame_counter = 0
         while cap.isOpened():
@@ -107,6 +108,7 @@ class ObjectDetection():
                 frame_counter += 1
                 continue
             detections = self.process_image(frame, classes, frame_counter == 0, conf_thresh, verbose)
+            detections_in_frames.append((frame_counter, merge_results_list(detections)))
 
             # TODO delete later is for testing
             if debug:
@@ -117,3 +119,4 @@ class ObjectDetection():
         cap.release()
         if debug: cv2.destroyAllWindows()
         # TODO return detections in some way
+        return detections_in_frames

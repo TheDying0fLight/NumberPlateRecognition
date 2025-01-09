@@ -127,3 +127,28 @@ def crop_image(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
     assert len(bbox) == 4, "Array must have exactly 4 entries"
     x1, y1, x2, y2 = bbox.astype("int")
     return image[y1:y2, x1:x2]
+
+def save_result_as_video(results: list[tuple[int, Results]], output_path: str, codec: str = "mp4v", class_filter: list[str] | str = None, 
+                         conf_thresh: float = None, censorship: Callable = None, frame_size=(1920, 1080), fps: int = 30, **kwargs):
+    def valid_codec(codec: str) -> bool:
+        try:
+            cv2.VideoWriter_fourcc(*codec)
+            return True
+        except cv2.error: return False
+        
+    if valid_codec(codec) is False: raise ValueError("Invalid codec provided")
+    
+    fourcc = cv2.VideoWriter_fourcc(*codec)
+    video_writer = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
+    for frame_counter, detection in results:
+        frame = detection.orig_img
+        if frame.shape[:2] != frame_size: frame = cv2.resize(frame, frame_size)
+        
+        if class_filter is not None: detection = filter_results(detection, class_filter, conf_thresh)
+        if censorship is not None: frame = apply_censorship(frame, detection, censorship, **kwargs)
+        
+        video_writer.write(frame) 
+    video_writer.release()
+    fourcc.release()
+    
+    
