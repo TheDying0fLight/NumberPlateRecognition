@@ -7,6 +7,7 @@ from typing import Callable
 import numpy as np
 import cv2
 import torch
+import ffmpeg
 import subprocess
 ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
@@ -154,16 +155,22 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str,or
     video_writer.release()
     
     if original_video_path:
-        audio_file = output_path.replace(".mp4", ".mp3")  # Temporary audio file
+        audio_file = output_path.replace(".mp4", ".mp3")
         
-        # Extract audio from original video
-        subprocess.run([
+        # TODO: Wont run with ffmpeg-python
+        ffmpeg_cmd_get_audio = [
             "ffmpeg", "-i", original_video_path, "-q:a", "0", "-map", "a", audio_file
-        ], check=True)
-        # combine audio and video
-        subprocess.run([
+        ]
+        
+        ffmpeg_cmd_combine_audio = [
             "ffmpeg", "-i", temp_output_path, "-i", audio_file, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", output_path
-        ], check=True)
+        ]
+        
+        try:
+            subprocess.run(ffmpeg_cmd_get_audio, check=True)
+            subprocess.run(ffmpeg_cmd_combine_audio, check=True)
+        except subprocess.CalledProcessError as e:
+            print("Conversion fail: ", e)
         
         Path(temp_output_path).unlink(missing_ok=True)
         Path(audio_file).unlink(missing_ok=True)
