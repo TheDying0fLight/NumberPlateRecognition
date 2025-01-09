@@ -7,6 +7,7 @@ from typing import Callable
 import numpy as np
 import cv2
 import torch
+import subprocess
 ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
 
@@ -129,7 +130,7 @@ def crop_image(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
     return image[y1:y2, x1:x2]
 
 
-def save_result_as_video(results: list[tuple[int, Results]], output_path: str, codec: str = "mp4v", class_filter: list[str] | str = None,
+def save_result_as_video(results: list[tuple[int, Results]], output_path: str,original_video_path ,codec: str = "mp4v", class_filter: list[str] | str = None,
                          conf_thresh: float = None, censorship: Callable = None, frame_size=(1920, 1080), fps: int = 30, **kwargs):
     def valid_codec(codec: str) -> bool:
         try:
@@ -140,7 +141,8 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str, c
     if valid_codec(codec) is False: raise ValueError("Invalid codec provided")
 
     fourcc = cv2.VideoWriter_fourcc(*codec)
-    video_writer = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
+    temp_output_path = output_path.replace(".mp4", "_temp.mp4")
+    video_writer = cv2.VideoWriter(temp_output_path, fourcc, fps, frame_size)
     for frame_counter, detection in results:
         frame = detection.orig_img
         if frame.shape[:2] != frame_size: frame = cv2.resize(frame, frame_size)
@@ -150,4 +152,19 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str, c
 
         video_writer.write(frame)
     video_writer.release()
-    fourcc.release()
+    
+    if original_video_path:
+        audio_file = output_path.replace(".mp4", ".mp3")  # Temporary audio file
+        
+        # Extract audio from original video
+        subprocess.run([
+            "ffmpeg", "-i", original_video_path, "-q:a", "0", "-map", "a", audio_file
+        ], check=True)
+        # combine audio and video
+        subprocess.run([
+            "ffmpeg", "-i", temp_output_path, "-i", audio_file, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", output_path
+        ], check=True)
+        
+        Path(temp_output_path).unlink(missing_ok=True)
+        Path(audio_file).unlink(missing_ok=True)
+        
