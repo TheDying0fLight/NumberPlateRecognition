@@ -7,6 +7,7 @@ from typing import Callable
 import numpy as np
 import cv2
 import torch
+import ffmpeg
 ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
 
@@ -127,3 +128,40 @@ def crop_image(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
     assert len(bbox) == 4, "Array must have exactly 4 entries"
     x1, y1, x2, y2 = bbox.astype("int")
     return image[y1:y2, x1:x2]
+
+
+def save_result_as_video(results: list[tuple[int, Results]], output_path: str, original_video_path, codec: str = "mp4v", class_filter: list[str] | str = None,
+                         conf_thresh: float = None, censorship: Callable = None, frame_size=(1920, 1080), fps: int = 30, copy_audio: bool = False, **kwargs):
+    def valid_codec(codec: str) -> bool:
+        try:
+            cv2.VideoWriter_fourcc(*codec)
+            return True
+        except cv2.error: return False
+
+    if valid_codec(codec) is False: raise ValueError("Invalid codec provided")
+
+    fourcc = cv2.VideoWriter_fourcc(*codec)
+    # Create a temporary video file to store the processed frames and then copy the audio from the original video to the processed video
+    temp_output_path = output_path.replace(".mp4", "_temp.mp4")
+    video_writer = cv2.VideoWriter(temp_output_path, fourcc, fps, frame_size)
+    for frame_counter, detection in results:
+        frame = detection.orig_img
+        if frame.shape[:2] != frame_size: frame = cv2.resize(frame, frame_size)
+
+        detection = filter_results(detection, class_filter, conf_thresh)
+        if censorship is not None: frame = apply_censorship(frame, detection, censorship, **kwargs)
+
+        video_writer.write(frame)
+    video_writer.release()
+
+    if original_video_path and copy_audio:
+        try:
+            input_video = ffmpeg.input(original_video_path)
+            input_audio = input_video.audio
+            input_temp_video = ffmpeg.input(temp_output_path)
+            ffmpeg.output(input_temp_video.video, input_audio, output_path, vcodec='copy',
+                          acodec='aac', strict='experimental').run(overwrite_output=True)
+        except ffmpeg.Error as e:
+            print("Conversion failed:", e)
+        finally:
+            Path(temp_output_path).unlink(missing_ok=True)
