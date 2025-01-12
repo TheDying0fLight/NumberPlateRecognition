@@ -148,7 +148,7 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str, o
         frame = detection.orig_img
         if frame.shape[:2] != frame_size: frame = cv2.resize(frame, frame_size)
 
-        if class_filter is not None: detection = filter_results(detection, class_filter, conf_thresh)
+        detection = filter_results(detection, class_filter, conf_thresh)
         if censorship is not None: frame = apply_censorship(frame, detection, censorship, **kwargs)
 
         video_writer.write(frame)
