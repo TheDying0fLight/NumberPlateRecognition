@@ -8,7 +8,6 @@ import numpy as np
 import cv2
 import torch
 import ffmpeg
-import subprocess
 ImageInput = str | Path | int | Image.Image | list | tuple | np.ndarray | torch.Tensor
 
 
@@ -131,8 +130,8 @@ def crop_image(image: ImageInput, bbox: np.ndarray) -> np.ndarray:
     return image[y1:y2, x1:x2]
 
 
-def save_result_as_video(results: list[tuple[int, Results]], output_path: str,original_video_path ,codec: str = "mp4v", class_filter: list[str] | str = None,
-                         conf_thresh: float = None, censorship: Callable = None, frame_size=(1920, 1080), fps: int = 30, **kwargs):
+def save_result_as_video(results: list[tuple[int, Results]], output_path: str, original_video_path, codec: str = "mp4v", class_filter: list[str] | str = None,
+                         conf_thresh: float = None, censorship: Callable = None, frame_size=(1920, 1080), fps: int = 30, copy_audio: bool = False, **kwargs):
     def valid_codec(codec: str) -> bool:
         try:
             cv2.VideoWriter_fourcc(*codec)
@@ -142,6 +141,7 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str,or
     if valid_codec(codec) is False: raise ValueError("Invalid codec provided")
 
     fourcc = cv2.VideoWriter_fourcc(*codec)
+    # Create a temporary video file to store the processed frames and then copy the audio from the original video to the processed video
     temp_output_path = output_path.replace(".mp4", "_temp.mp4")
     video_writer = cv2.VideoWriter(temp_output_path, fourcc, fps, frame_size)
     for frame_counter, detection in results:
@@ -153,25 +153,15 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str,or
 
         video_writer.write(frame)
     video_writer.release()
-    
-    if original_video_path:
-        audio_file = output_path.replace(".mp4", ".mp3")
-        
-        # TODO: Wont run with ffmpeg-python
-        ffmpeg_cmd_get_audio = [
-            "ffmpeg", "-i", original_video_path, "-q:a", "0", "-map", "a", audio_file
-        ]
-        
-        ffmpeg_cmd_combine_audio = [
-            "ffmpeg", "-i", temp_output_path, "-i", audio_file, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", output_path
-        ]
-        
+
+    if original_video_path and copy_audio:
         try:
-            subprocess.run(ffmpeg_cmd_get_audio, check=True)
-            subprocess.run(ffmpeg_cmd_combine_audio, check=True)
-        except subprocess.CalledProcessError as e:
-            print("Conversion fail: ", e)
-        
-        Path(temp_output_path).unlink(missing_ok=True)
-        Path(audio_file).unlink(missing_ok=True)
-        
+            input_video = ffmpeg.input(original_video_path)
+            input_audio = input_video.audio
+            input_temp_video = ffmpeg.input(temp_output_path)
+            ffmpeg.output(input_temp_video.video, input_audio, output_path, vcodec='copy',
+                          acodec='aac', strict='experimental').run(overwrite_output=True)
+        except ffmpeg.Error as e:
+            print("Conversion failed:", e)
+        finally:
+            Path(temp_output_path).unlink(missing_ok=True)
