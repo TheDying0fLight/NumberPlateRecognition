@@ -36,7 +36,7 @@ class Media:
     })
     saved: bool = False
     has_to_be_closed: bool = False
-    current_preview: Version = Version.PREVIEW
+    censored_available: bool = False
     preview_container = None
 
     def set_file(self, version: Version, file: FileVersion):
@@ -49,8 +49,8 @@ class Media:
     def get_path(self, version: Version):
         return f'{self.cache_path}{self.id}/{self.files[version].name}.{self.files[version].fmt}'
 
-    def get_path_preview(self):
-        return self.get_path(self.current_preview)
+    def get_path_preview(self, censored_if_available):
+        return self.get_path(Version.PREVIEW_CENSORED if censored_if_available and self.censored_available else Version.PREVIEW)
 
     def get_orig_name(self):
         return f'{self.name}.{self.files[Version.ORIG].fmt}'

@@ -27,6 +27,7 @@ class UI_App:
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
+        self.show_censored = True
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
@@ -60,9 +61,9 @@ class UI_App:
             media = self.file_manager[id]
             media.selected(True)
             if type(media) is Image:
-                self.media_container.content = ft.Image(media.get_path_preview(), fit=ft.ImageFit.CONTAIN)
+                self.media_container.content = ft.Image(media.get_path_preview(self.show_censored), fit=ft.ImageFit.CONTAIN)
             if type(media) is Video:
-                self.media_container.content = VideoPlayer(media.get_path_preview(), media.aspect_ratio, colors=self.colors)
+                self.media_container.content = VideoPlayer(media.get_path_preview(self.show_censored), media.aspect_ratio, colors=self.colors)
                 # TODO: set player to current position
         self.update()
 
@@ -108,19 +109,17 @@ class UI_App:
 
     def blur_current_img_callback(self, cls_id):
         self.blur_img(self.file_manager[self.selected_media], [cls_id])
-        self.media_container.content = ft.Image(self.file_manager[self.selected_media].get_path_preview(), fit=ft.ImageFit.CONTAIN)
-        self.update()
+        self.update_media_container_with_img()
 
     def blur_all_callback(self):
         for img in self.file_manager.values():
             if type(img) is not Image: continue
             self.blur_img(img, [cls_id for cls_id in self.model_manager.cls if self.model_manager.active[cls_id]])
-        self.media_container.content = ft.Image(self.file_manager[self.selected_media].get_path_preview(), fit=ft.ImageFit.CONTAIN)
-        self.update()
+        self.update_media_container_with_img()
 
-    def toggle_blur_orig(self):
-        self.file_manager
-        self.update()
+    def toggle_blur_orig(self, info):
+        self.show_censored = not self.show_censored
+        self.update_media_container_with_img()
 
     def add_model_callback(self, info):
         print('add model')
@@ -130,12 +129,19 @@ class UI_App:
 
     def update(self):
         self.tiles.controls = [
-            ModelTile(c, self.tiles_open_closed, self.colors,
+            ModelTile(c, self.tiles_open_closed, self.model_manager.active, self.colors,
             active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
             boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
             blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
             ) for c in self.model_manager.cls]
         self.page.update()
+
+    def update_media_container_with_img(self):
+        with open(self.file_manager[self.selected_media].get_path_preview(self.show_censored), "rb") as img_file:
+            encoded_string = base64.b64encode(img_file.read()).decode("utf-8")
+        self.media_container.content = ft.Image(src_base64=encoded_string, fit=ft.ImageFit.CONTAIN)
+        self.media_container.update()
+        self.update()
 
     def build_page(self, page: ft.Page):
         self.page = page

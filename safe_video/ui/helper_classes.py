@@ -77,13 +77,19 @@ class FileManger(dict[str, Media]):
             if not os.path.isdir(dir_path): continue
             name, counter = re.findall("(.*)_(\d)+$", directory)[0]
             media = Media(id=directory, cache_path=self.CACHE_PATH, name=name)
+            censored_files = 0
             for file in os.listdir(dir_path):
                 file_name, fmt = re.findall("(.*)\.(.*)$", file)[0]
                 for version in Version:
                     if file_name == media.files[version].name:
                         media.files[version].fmt = fmt
+                        if version is Version.ORIG_CENSORED or version is Version.PREVIEW_CENSORED:
+                            censored_files += 1
+            if censored_files == 2:
+                media.censored_available = True
                 # TODO: Check if all files are there and no other files are in the directory
             media.set_orig_fmt(media.files[Version.ORIG].fmt)
+            print(media)
             if media.files[Version.ORIG].fmt is not None and directory not in self:
                 if media.files[Version.ORIG].fmt in self.IMAGE_FMTS:
                     self.__setitem__(directory, Image(media))
@@ -138,7 +144,7 @@ class FileManger(dict[str, Media]):
         censored_img = PIL.Image.fromarray(blur_result)
         censored_img.save(img.get_path(Version.ORIG_CENSORED))
         self.__create_new_version_of_image(img.get_path(Version.ORIG_CENSORED), img.get_path(Version.PREVIEW_CENSORED), self.PREVIEW_MAX_SIZE)
-        img.current_preview = Version.PREVIEW_CENSORED
+        img.censored_available = True
 
     def __create_preview_and_icon_from_video(self, orig_path: str, preview_path: str, icon_path: str):
         shutil.copy(orig_path, preview_path)

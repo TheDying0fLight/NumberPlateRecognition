@@ -61,7 +61,7 @@ class VideoPlayer(ft.Video):
         )
 
 class ModelTile(ft.ExpansionTile):
-    def __init__(self, name, open_closed: dict, colors: ColorPalette, active_callback, boundingBox_callback, blur_callback):
+    def __init__(self, name, open_closed: dict, active: dict, colors: ColorPalette, active_callback, boundingBox_callback, blur_callback):
         def open_close_callback(info):
             open_closed[info.control.key] = info.data
         super().__init__(
@@ -69,7 +69,7 @@ class ModelTile(ft.ExpansionTile):
             initially_expanded = open_closed[name],
             maintain_state = True,
             key=name,
-            leading=ft.Checkbox(on_change=active_callback, value=True, key=name),
+            leading=ft.Checkbox(on_change=active_callback, value=active[name], key=name),
             shape=ft.StadiumBorder(),
             expanded_cross_axis_alignment=ft.CrossAxisAlignment.START,
             controls_padding=5,
