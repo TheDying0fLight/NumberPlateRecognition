@@ -93,7 +93,7 @@ class ObjectDetection():
     def process_video(self, video_path: str, classes: str | list[str | list[str]],
                       confidence_threshold: float = 0.25, iou_threshold: float = 0.7, video_stride: int = 1,
                       enable_stream_buffer: bool = False, augment: bool = False,
-                      debug: bool = False, verbose: bool = False):
+                      debug: bool = False, verbose: bool = False) -> list[tuple[int, Results]]:
         def debug_show_video(frame: ImageInput) -> bool:
             cv2.imshow("frame", cv2.resize(frame, (1200, 800)))
             return cv2.waitKey(1) & 0xFF == ord('q')
@@ -115,14 +115,10 @@ class ObjectDetection():
             # TODO delete later is for testing
             if debug:
                 frame = merge_results_list(detections).plot()
-                # detections = merge_results_list(detections)
-                # detections = filter_results(detections, "License_Plate", confidence_threshold)
-                # frame = merge_results_list(detections).plot()
-                # frame = apply_censorship(frame, detections, Censor.blur)
                 if debug_show_video(frame): break
             frame_counter += 1
 
         cap.release()
         if debug: cv2.destroyAllWindows()
-        # TODO return detections in some way
+        
         return detections_in_frames
