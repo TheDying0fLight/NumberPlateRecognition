@@ -165,4 +165,9 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str, o
                           acodec='aac', strict='experimental').run(overwrite_output=True)
         except ffmpeg.Error as e:
             print("Conversion failed:", e)
-    Path(temp_output_path).unlink(missing_ok=True)
+        finally:
+            Path(temp_output_path).unlink(missing_ok=True)
+    else:
+        Path(temp_output_path).replace(output_path)
+        
+    
