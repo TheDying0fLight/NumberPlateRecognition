@@ -6,6 +6,7 @@ import cv2
 from ultralytics.engine.results import Results
 import numpy as np
 import torch
+import warnings
 
 
 class ObjectDetection():
@@ -14,10 +15,16 @@ class ObjectDetection():
         self.file_path = file_path
         self.models: list[YOLO] = []
         self.add_model(os.path.join(os.path.abspath("."), "models", "first10ktrain", "weights", "best.pt"))
+        # self.add_model(r"runs\detect\train5\weights\best.pt")
         self.add_model(os.path.join(os.path.abspath("."), "models", "yolo11n.pt"))
 
     def add_model(self, path: str):
         model = YOLO(path, task="detect")
+        if set(model.names.values()).issubset(self.get_classes()):
+            raise ValueError(f"All classes from the new model already exist: {list(model.names.values())}")
+        intersection = list(set(model.names.values()) & set(self.get_classes()))
+        if len(intersection) > 0:
+            warnings.warn(f"Following new classes will not already exist: {intersection}")
         model.to(self.device)
         self.models.append(model)
 
