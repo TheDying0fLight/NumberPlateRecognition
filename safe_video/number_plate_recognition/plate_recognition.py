@@ -28,7 +28,10 @@ class ObjectDetection():
         model.to(self.device)
         self.models.append(model)
 
-    def get_classes(self) -> list[str]: return np.concatenate([list(model.names.values()) for model in self.models])
+    def get_classes(self) -> list[str]: 
+        if len(self.models) == 0:
+            return []
+        return np.concatenate([list(model.names.values()) for model in self.models])
 
     def map_classes_to_models(self, classes: list[str]) -> dict[int, list[int]]:
         classes = classes.copy()
