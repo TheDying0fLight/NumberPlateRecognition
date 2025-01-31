@@ -61,7 +61,7 @@ class UI_App:
             media = self.file_manager[id]
             media.selected(True)
             if type(media) is Image:
-                self.media_container.content = ft.Image(media.get_path_preview(self.show_censored), fit=ft.ImageFit.CONTAIN)
+                self.update_media_container_with_img()
             if type(media) is Video:
                 self.media_container.content = VideoPlayer(media.get_path_preview(self.show_censored), media.aspect_ratio, colors=self.colors)
                 # TODO: set player to current position
