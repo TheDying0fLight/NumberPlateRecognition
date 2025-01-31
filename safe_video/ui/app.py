@@ -1,7 +1,7 @@
 import flet as ft
 from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette, Version
-from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile
+from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow
 from .helper_classes import FileManger, ModelManager
 from flet.matplotlib_chart import MatplotlibChart
 import base64
@@ -25,7 +25,7 @@ class UI_App:
         self.selected_media: str = None
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
-        self.tiles_open_closed = {cls: False for cls in self.model_manager.cls}
+        self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
         self.show_censored = True
 
@@ -114,7 +114,7 @@ class UI_App:
     def blur_all_callback(self):
         for img in self.file_manager.values():
             if type(img) is not Image: continue
-            self.blur_img(img, [cls_id for cls_id in self.model_manager.cls if self.model_manager.active[cls_id]])
+            self.blur_img(img, [cls_id for cls_id in self.model_manager.cls.keys() if self.model_manager.active[cls_id]])
         self.update_media_container_with_img()
 
     def toggle_blur_orig(self, info):
@@ -122,18 +122,37 @@ class UI_App:
         self.update_media_container_with_img()
 
     def add_model_callback(self, info):
-        print('add model')
+        def add_class(name, classes):
+            id = self.model_manager.insert_new_cls(name, classes)
+            self.tiles_open_closed[id] = False
+            self.update()
+        self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
     def settings_callback(self, info: ft.ControlEvent):
         print('TODO: Settings')
 
     def update(self):
+        def edit_callback(info):
+            def edit_class(name, classes):
+                id = self.model_manager.edit_cls(old_name=info.control.key, new_name=name, classes=classes)
+                if id != info.control.key:
+                    open_closed = self.tiles_open_closed[info.control.key]
+                    del self.tiles_open_closed[info.control.key]
+                    self.tiles_open_closed[id] = open_closed
+                self.update()
+            self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), edit_class, self.colors, (info.control.key, self.model_manager.cls[info.control.key])))
+        def delete_callback(info):
+            self.model_manager.delete_cls(info.control.key)
+            del self.tiles_open_closed[info.control.key]
+            self.update()
         self.tiles.controls = [
             ModelTile(c, self.tiles_open_closed, self.model_manager.active, self.colors,
             active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
             boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
             blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
-            ) for c in self.model_manager.cls]
+            edit_callback=edit_callback,
+            delete_callback=delete_callback
+            ) for c in self.model_manager.cls.keys()]
         self.page.update()
 
     def update_media_container_with_img(self):

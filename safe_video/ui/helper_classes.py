@@ -5,28 +5,67 @@ import PIL
 import PIL.Image
 import warnings
 import cv2
+import pickle
 import flet as ft
 from matplotlib import pyplot as plt
 import numpy as np
 
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
 from .components import ModelTile
-from safe_video.number_plate_recognition import ObjectDetection, Censor, apply_censorship
+from safe_video.number_plate_recognition import ObjectDetection, Censor, apply_censorship, merge_results_list
 from ultralytics.engine.results import Results
 
 class ModelManager():
     def __init__(self, bounding_box_func):
         self.detection: ObjectDetection = ObjectDetection()
-        self.cls = self.detection.get_classes()[0:2]
-        self.active: dict[str, bool] = {c: True for c in self.cls}
+        self.cls_file_path = 'safe_video/ui/cls_file.pkl'
+        self.cls = {}
+        if os.path.isfile(self.cls_file_path):
+            with open(self.cls_file_path, 'rb') as file:
+                self.cls = pickle.load(file)
+        self.active: dict[str, bool] = {c: True for c in self.cls.keys()}
         self.results: dict[str, dict[str, Results]] = dict() # dict[cls_id][img_id]
         self.bounding_box_func = bounding_box_func
 
     def toggle_active(self, cls_id):
         self.active[cls_id] = not self.active[cls_id]
 
+    def get_possible_cls(self):
+        return self.detection.get_classes()
+
+    def insert_new_cls(self, name, classes, active = True):
+        counter = 1
+        id = name
+        while id in self.cls.keys():
+            id = name + ' ' + str(counter)
+            counter +=1
+        self.cls[id] = classes
+        self.active[id] = active
+        self.update_cls_file()
+        return id
+
+    def edit_cls(self, old_name, new_name, classes):
+        if new_name == old_name:
+            self.cls[old_name] = classes
+            self.update_cls_file()
+            return old_name
+        else:
+            del self.cls[old_name]
+            active = self.active[old_name]
+            del self.active[old_name]
+            return self.insert_new_cls(new_name, classes, active)
+
+    def delete_cls(self, id):
+        del self.cls[id]
+        del self.active[id]
+        self.update_cls_file()
+
+    def update_cls_file(self):
+        with open(self.cls_file_path, 'wb') as file:
+            pickle.dump(self.cls, file, protocol=pickle.HIGHEST_PROTOCOL)
+
     def get_bounding_box_fig(self, cls_id, img: Image):
-        plot = self.analyze_or_from_cache(cls_id, img).plot()
+        plot = merge_results_list(self.analyze_or_from_cache(cls_id, img)).plot()
         hight, length = np.shape(plot)[0:2]
         scale = 10/min(length, hight)
         with warnings.catch_warnings(action="ignore"):
@@ -38,7 +77,7 @@ class ModelManager():
     def get_blurred_as_list(self, cls_ids: str, img: Image):
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
         for cls_id in cls_ids:
-            img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img), Censor.blur)
+            img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
         return img_loaded
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> Results:
@@ -47,9 +86,8 @@ class ModelManager():
         if not img.id in self.results[cls_id]:
             img_loaded = cv2.imread(img.get_path(Version.ORIG))
             img_loaded = img_loaded[:, :, ::-1]
-            self.results[cls_id][img.id] = self.detection.process_image(img_loaded, cls_id, conf_thresh=0.25)[0]
+            self.results[cls_id][img.id] = self.detection.process_image(img_loaded, self.cls[cls_id], conf_thresh=0.25)
         return self.results[cls_id][img.id]
-
 
 
 class FileManger(dict[str, Media]):
@@ -89,7 +127,6 @@ class FileManger(dict[str, Media]):
                 media.censored_available = True
                 # TODO: Check if all files are there and no other files are in the directory
             media.set_orig_fmt(media.files[Version.ORIG].fmt)
-            print(media)
             if media.files[Version.ORIG].fmt is not None and directory not in self:
                 if media.files[Version.ORIG].fmt in self.IMAGE_FMTS:
                     self.__setitem__(directory, Image(media))
