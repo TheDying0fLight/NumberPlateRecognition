@@ -74,7 +74,7 @@ class ModelManager():
             ax.imshow(plot)
         return fig
 
-    def get_blurred_as_list(self, cls_ids: str, img: Image):
+    def get_blurred_as_list(self, cls_ids: str, img: Image) -> np.ndarray:
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
         for cls_id in cls_ids:
             img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
