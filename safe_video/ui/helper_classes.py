@@ -80,7 +80,7 @@ class ModelManager():
             img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
         return img_loaded
 
-    def analyze_or_from_cache(self, cls_id, img: Image) -> Results:
+    def analyze_or_from_cache(self, cls_id, img: Image) -> list[Results]:
         if cls_id not in self.results:
             self.results[cls_id] = dict()
         if not img.id in self.results[cls_id]:
