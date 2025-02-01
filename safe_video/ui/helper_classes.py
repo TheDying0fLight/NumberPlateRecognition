@@ -18,7 +18,7 @@ from ultralytics.engine.results import Results
 class ModelManager():
     def __init__(self, bounding_box_func):
         self.detection: ObjectDetection = ObjectDetection()
-        self.cls_file_path = 'safe_video/ui/cls_file.pkl'
+        self.cls_file_path = 'safe_video/upload_cache/cls_file.pkl'
         self.cls = {}
         if os.path.isfile(self.cls_file_path):
             with open(self.cls_file_path, 'rb') as file:
@@ -45,6 +45,8 @@ class ModelManager():
         return id
 
     def edit_cls(self, old_name, new_name, classes):
+        if old_name in self.results:
+            del self.results[old_name]
         if new_name == old_name:
             self.cls[old_name] = classes
             self.update_cls_file()
@@ -56,6 +58,8 @@ class ModelManager():
             return self.insert_new_cls(new_name, classes, active)
 
     def delete_cls(self, id):
+        if id in self.results:
+            del self.results[id]
         del self.cls[id]
         del self.active[id]
         self.update_cls_file()

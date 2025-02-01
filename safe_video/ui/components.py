@@ -133,7 +133,7 @@ class AddClassLayerRow(ft.Container):
     def get_values(self):
         vals = []
         for dropdown in self.cls_row.controls[:-2]:
-            if dropdown.value is not None:
+            if dropdown.value != '':
                 vals.append(dropdown.value)
         return vals
 
