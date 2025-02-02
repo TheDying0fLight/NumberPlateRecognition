@@ -2,7 +2,6 @@ import os
 import shutil
 import re
 import PIL
-import PIL.Image
 import warnings
 import cv2
 import pickle
