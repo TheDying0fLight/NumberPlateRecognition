@@ -103,12 +103,12 @@ class UI_App:
             ))
 
     def show_bounding_boxes(self, model_id):
-        b64 = self.model_manager.get_bounding_box_fig(model_id, self.file_manager[self.selected_media])
+        b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
         self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
         self.update()
 
     def blur_img(self, img: Image, cls_ids: list[str]):
-        censored_img = self.model_manager.get_blurred_as_list(cls_ids, img)
+        censored_img = self.model_manager.get_blurred_image(cls_ids, img)
         self.file_manager.create_blurred_imgs(img.id, censored_img)
 
     def blur_current_img_callback(self, cls_id):

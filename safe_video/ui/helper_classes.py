@@ -67,14 +67,14 @@ class ModelManager():
         with open(self.cls_file_path, 'wb') as file:
             pickle.dump(self.cls, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_bounding_box_fig(self, cls_id, img: Image):
+    def get_bounding_box_image(self, cls_id: str, img: Image):
         bb_image = merge_results_list(self.analyze_or_from_cache(cls_id, img)).plot()
         image = PIL.Image.fromarray(bb_image)
         buffered = io.BytesIO()
         image.save(buffered, format="jpeg")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    def get_blurred_as_list(self, cls_ids: str, img: Image) -> np.ndarray:
+    def get_blurred_image(self, cls_ids: str, img: Image) -> np.ndarray:
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
         for cls_id in cls_ids:
             img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
