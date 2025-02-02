@@ -69,7 +69,7 @@ class ModelManager():
 
     def get_bounding_box_fig(self, cls_id, img: Image):
         bb_image = merge_results_list(self.analyze_or_from_cache(cls_id, img)).plot()
-        image = Image.fromarray(bb_image)
+        image = PIL.Image.fromarray(bb_image)
         buffered = io.BytesIO()
         image.save(buffered, format="jpeg")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
