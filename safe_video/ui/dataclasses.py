@@ -14,6 +14,7 @@ class FileVersionTemplate:
     fmt: str | None = None
     max_size: int | None = None
 
+
 class Version(Flag):
     ORIG = auto()
     PREVIEW = auto()

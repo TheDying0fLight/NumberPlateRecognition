@@ -2,13 +2,12 @@ import os
 import shutil
 import re
 import PIL
-import PIL.Image
 import warnings
 import cv2
 import pickle
-import flet as ft
-from matplotlib import pyplot as plt
 import numpy as np
+import base64
+import io
 
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
 from .components import ModelTile
@@ -68,17 +67,14 @@ class ModelManager():
         with open(self.cls_file_path, 'wb') as file:
             pickle.dump(self.cls, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_bounding_box_fig(self, cls_id, img: Image):
-        plot = merge_results_list(self.analyze_or_from_cache(cls_id, img)).plot()
-        hight, length = np.shape(plot)[0:2]
-        scale = 10/min(length, hight)
-        with warnings.catch_warnings(action="ignore"):
-            fig = plt.figure(frameon=False, figsize=(length*scale,hight*scale))
-            ax = fig.add_axes([0, 0, 1, 1])
-            ax.imshow(plot)
-        return fig
+    def get_bounding_box_image(self, cls_id: str, img: Image):
+        bb_image = merge_results_list(self.analyze_or_from_cache(cls_id, img)).plot()
+        image = PIL.Image.fromarray(bb_image)
+        buffered = io.BytesIO()
+        image.save(buffered, format="jpeg")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    def get_blurred_as_list(self, cls_ids: str, img: Image) -> np.ndarray:
+    def get_blurred_image(self, cls_ids: str, img: Image) -> np.ndarray:
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
         for cls_id in cls_ids:
             img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
@@ -87,7 +83,7 @@ class ModelManager():
     def analyze_or_from_cache(self, cls_id, img: Image) -> list[Results]:
         if cls_id not in self.results:
             self.results[cls_id] = dict()
-        if not img.id in self.results[cls_id]:
+        if img.id not in self.results[cls_id]:
             img_loaded = cv2.imread(img.get_path(Version.ORIG))
             img_loaded = img_loaded[:, :, ::-1]
             self.results[cls_id][img.id] = self.detection.process_image(img_loaded, self.cls[cls_id], conf_thresh=0.25)
