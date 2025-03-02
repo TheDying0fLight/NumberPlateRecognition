@@ -209,3 +209,32 @@ class AddClassWindow(ft.AlertDialog):
         self.num_layers -= 1
         del self.content.controls[-3]
         self.update()
+
+
+class SettingsWindow(ft.AlertDialog):
+    def __init__(self, colors: ColorPalette, load_callback, file_picker):
+        self.colors = colors
+        self.error_text = ft.Text('', color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
+        self.callback = load_callback
+
+        super().__init__(
+            modal=False,
+            title=ft.Text("Load your own model for detection"),
+            content=ft.ListView(
+                [ft.TextButton(
+                    'Load new model',
+                    icon=ft.icons.ADD,
+                    on_click=lambda _:file_picker.pick_files(
+                        file_type=ft.FilePickerFileType.CUSTOM,
+                        allowed_extensions=['pt'],
+                        allow_multiple=True
+                    ),
+                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20))],
+                self.error_text,
+                width=1000, spacing=10),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self.page.close(self)),
+            ])
+
+    def load_model(self, file_results: ft.FilePickerResultEvent):
+        self.callback(file_results.path)
