@@ -31,6 +31,7 @@ class UI_App:
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
         self.show_censored = True
+        self.models_path = 'safe_video/upload_cache/models.pkl'
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
@@ -138,23 +139,35 @@ class UI_App:
     def settings_callback(self, info: ft.ControlEvent):
         self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model,
                                       model_callback=self.model_manager.detection.get_names_with_classes,
-                                      del_callback=self.model_manager.detection.del_model,
+                                      del_callback=self.del_model,
                                       file_picker=self.file_picker_import_models))
 
     def add_new_model(self, file_results: ft.FilePickerResultEvent):
         self.model_manager.detection.add_model(file_results.files[0].path)
         def update_model_path(path):
-            models = []
             try:
-                with open('safe_video/upload_cache/models.pkl', 'rb') as models_file:
+                with open(self.models_path, 'rb') as models_file:
                     models = pickle.load(models_file)
             except FileNotFoundError:
-                pass
+                models = []
             models.append(path)
-            with open('safe_video/upload_cache/models.pkl', 'wb') as file:
+            with open(self.models_path, 'wb') as file:
                 pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
         update_model_path(file_results.files[0].path)
         self.update()
+
+    def del_model(self, model_name: str):
+        try:
+            with open(self.models_path, 'rb') as models_file:
+                models = pickle.load(models_file)
+        except FileNotFoundError:
+            models = []
+        for model in self.model_manager.detection.models:
+            if model.model_name in models:
+                models.remove(model.model_name)
+        with open(self.models_path, 'wb') as file:
+            pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
+        self.model_manager.detection.del_model(model_name)
 
     def update(self):
         def edit_callback(info):
@@ -232,12 +245,15 @@ class UI_App:
         names = self.file_manager.load_cached()
         self.load_images(names)
         try:
-            with open('safe_video/upload_cache/models.pkl', 'rb') as models_file:
+            with open(self.models_path, 'rb') as models_file:
                 models = pickle.load(models_file)
         except FileNotFoundError:
             models = []
         for model in models:
-            self.model_manager.detection.add_model(model)
+            try:
+                self.model_manager.detection.add_model(model)
+            except:
+                pass
         self.update()
 
     def run(self):
