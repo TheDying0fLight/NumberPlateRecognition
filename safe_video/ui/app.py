@@ -235,7 +235,7 @@ class UI_App:
             with open('safe_video/upload_cache/models.pkl', 'rb') as models_file:
                 models = pickle.load(models_file)
         except FileNotFoundError:
-            pass
+            models = []
         for model in models:
             self.model_manager.detection.add_model(model)
         self.update()
