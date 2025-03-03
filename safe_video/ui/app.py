@@ -5,6 +5,7 @@ from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, A
 from .helper_classes import FileManger, ModelManager
 from flet.matplotlib_chart import MatplotlibChart
 import base64
+import pickle
 
 DarkColors = ColorPalette(
     normal="#1a1e26",
@@ -142,6 +143,17 @@ class UI_App:
 
     def add_new_model(self, file_results: ft.FilePickerResultEvent):
         self.model_manager.detection.add_model(file_results.files[0].path)
+        def update_model_path(path):
+            models = []
+            try:
+                with open('safe_video/upload_cache/models.pkl', 'rb') as models_file:
+                    models = pickle.load(models_file)
+            except FileNotFoundError:
+                pass
+            models.append(path)
+            with open('safe_video/upload_cache/models.pkl', 'wb') as file:
+                pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
+        update_model_path(file_results.files[0].path)
         self.update()
 
     def update(self):
@@ -219,6 +231,13 @@ class UI_App:
         )
         names = self.file_manager.load_cached()
         self.load_images(names)
+        try:
+            with open('safe_video/upload_cache/models.pkl', 'rb') as models_file:
+                models = pickle.load(models_file)
+        except FileNotFoundError:
+            pass
+        for model in models:
+            self.model_manager.detection.add_model(model)
         self.update()
 
     def run(self):
