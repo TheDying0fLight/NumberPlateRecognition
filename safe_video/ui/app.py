@@ -135,7 +135,10 @@ class UI_App:
         self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
     def settings_callback(self, info: ft.ControlEvent):
-        self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model, file_picker=self.file_picker_import_models))
+        self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model,
+                                      model_callback=self.model_manager.detection.get_names_with_classes,
+                                      del_callback=self.model_manager.detection.del_model,
+                                      file_picker=self.file_picker_import_models))
 
     def add_new_model(self, file_results: ft.FilePickerResultEvent):
         self.model_manager.detection.add_model(file_results.files[0].path)

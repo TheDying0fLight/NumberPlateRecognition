@@ -183,15 +183,15 @@ class AddClassWindow(ft.AlertDialog):
                               bgcolor=colors.normal, border_color=colors.text)]
                 + layers
                 + [ft.Row([ft.TextButton(
-                    'Add new layer',
-                    icon=ft.icons.ADD,
-                    on_click=self.add_layer,
-                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20)),
+                        'Add new layer',
+                        icon=ft.icons.ADD,
+                        on_click=self.add_layer,
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20)),
                     ft.TextButton(
-                    'Remove layer',
-                    icon=ft.icons.REMOVE,
-                    on_click=self.remove_layer,
-                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20))]),
+                        'Remove layer',
+                        icon=ft.icons.REMOVE,
+                        on_click=self.remove_layer,
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20))]),
                    self.error_text
                    ], width=1000, spacing=10),
             actions=[
@@ -212,29 +212,91 @@ class AddClassWindow(ft.AlertDialog):
 
 
 class SettingsWindow(ft.AlertDialog):
-    def __init__(self, colors: ColorPalette, load_callback, file_picker):
+    def __init__(self, colors: ColorPalette, load_callback, model_callback, del_callback, file_picker):
         self.colors = colors
         self.error_text = ft.Text('', color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
         self.callback = load_callback
-
+        self.model_callback = model_callback
+        self.del_callback = del_callback
+        self.models = []
+        self.model_list = ft.Column()
+        self.expanded_models = {}
         super().__init__(
             modal=False,
-            title=ft.Text("Load your own model for detection"),
-            content=ft.ListView(
-                [ft.TextButton(
-                    'Load new model',
-                    icon=ft.icons.ADD,
-                    on_click=lambda _:file_picker.pick_files(
-                        file_type=ft.FilePickerFileType.CUSTOM,
-                        allowed_extensions=['pt'],
-                        allow_multiple=True
+            title=ft.Text("Options", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Divider(),
+                    ft.TextButton(
+                        'Add new model',
+                        icon=ft.icons.ADD,
+                        on_click=lambda _: file_picker.pick_files(
+                            file_type=ft.FilePickerFileType.CUSTOM,
+                            allowed_extensions=['pt'],
+                            allow_multiple=True
+                        ),
                     ),
-                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=20))],
-                self.error_text,
-                width=1000, spacing=10),
+                    self.error_text,
+                    ft.Text("Models:", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+                    ft.Container(
+                        content=ft.ListView([self.model_list], expand=True),
+                        expand=True,
+                        height=300
+                    )
+                ], width=500, spacing=10, alignment=ft.MainAxisAlignment.CENTER),
+                alignment=ft.alignment.center
+            ),
             actions=[
+                ft.TextButton("Reload", on_click=lambda _: self.update_category_list()),
                 ft.TextButton("Close", on_click=lambda _: self.page.close(self)),
-            ])
+            ]
+        )
+        self.update_category_list(True)
 
-    def load_model(self, file_results: ft.FilePickerResultEvent):
+    def toggle_expand(self, model_name):
+        self.expanded_models[model_name] = not self.expanded_models.get(model_name, True)
+        self.update_category_list()
+
+    def delete_model(self, model_name):
+        self.del_callback(model_name)
+        self.update_category_list()
+
+    def add_model(self, file_results: ft.FilePickerResultEvent):
         self.callback(file_results.path)
+        self.update_category_list()
+
+    def update_category_list(self, init=False):
+        self.model_list.controls.clear()
+        self.models = self.model_callback()
+        for model_name, elements in self.models:
+            is_expanded = self.expanded_models.get(model_name, True)
+            model_card = ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text(model_name, weight=ft.FontWeight.BOLD, expand=True),
+                        ft.IconButton(
+                            icon=ft.icons.ARROW_DROP_DOWN if is_expanded else ft.icons.ARROW_RIGHT,
+                            on_click=lambda e, name=model_name: self.toggle_expand(name)
+                        ),
+                        ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, name=model_name: self.delete_model(name))
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Container(
+                                content=ft.Text(f"{elem}"),
+                                padding=ft.padding.all(5),
+                                bgcolor=self.colors.background,
+                                border_radius=5
+                            ) for elem in elements
+                        ], spacing=5),
+                        visible=is_expanded,
+                        padding=ft.padding.only(left=20)
+                    )
+                ], spacing=10),
+                padding=ft.padding.all(10),
+                border=ft.border.all(1, ft.colors.GREY_400),
+                border_radius=10,
+                width=450
+            )
+            self.model_list.controls.append(model_card)
+        if not init: self.update()
