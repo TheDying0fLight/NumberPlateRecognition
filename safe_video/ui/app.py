@@ -134,6 +134,7 @@ class UI_App:
         def add_class(name, classes):
             id = self.model_manager.insert_new_cls(name, classes)
             self.tiles_open_closed[id] = False
+            self.tiles_censor_options[id] = CensorOptions(self.page, self.colors, self.update)
             self.update()
         self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
@@ -155,19 +156,18 @@ class UI_App:
                 self.update()
             self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), edit_class,
                         self.colors, (info.control.key, self.model_manager.cls[info.control.key])))
-
         def delete_callback(info):
             self.model_manager.delete_cls(info.control.key)
             del self.tiles_open_closed[info.control.key]
             self.update()
         self.tiles.controls = [
             ModelTile(c, self.tiles_open_closed, self.tiles_censor_options, self.model_manager.active, self.colors,
-                    active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
-                    boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
-                    blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
-                    edit_callback=edit_callback,
-                    delete_callback=delete_callback,
-                    ) for c in self.model_manager.cls.keys()]
+                active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
+                boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
+                blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
+                edit_callback=edit_callback,
+                delete_callback=delete_callback,
+                ) for c in self.model_manager.cls.keys()]
         self.page.update()
 
     def update_media_container_with_img(self):

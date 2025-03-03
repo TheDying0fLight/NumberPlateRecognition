@@ -186,9 +186,9 @@ class ModelTile(ft.ExpansionTile):
             controls=[ft.Row([
                 ft.Column([], width=30),
                 ft.Container(ft.Column([
+                    censor_options[name],
                     ModelTileButton(colors, "show bounding boxes", on_click=boundingBox_callback, key=name),
                     ModelTileButton(colors, "censor", on_click=blur_callback, key=name),
-                    censor_options[name],
                 ])),
                 ft.Container(ft.Column([
                     ft.IconButton(icon=ft.icons.EDIT, icon_color=colors.text, on_click=edit_callback, key=name),
