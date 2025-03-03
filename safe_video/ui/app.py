@@ -115,7 +115,7 @@ class UI_App:
             censored_img = self.model_manager.get_blurred_image(cls_ids, img)
             self.file_manager.create_blurred_imgs(img.id, censored_img)
         except ValueError:
-            self.page.open(ft.SnackBar(ft.Text("No classes found for any model"), bgcolor='#800000'))
+            self.page.open(ft.SnackBar(ft.Text("No classes found for any model", color="white"), bgcolor=ft.colors.RED_500))
             return
 
     def blur_current_img_callback(self, cls_id):
