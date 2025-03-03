@@ -74,10 +74,10 @@ class ModelManager():
         image.save(buffered, format="jpeg")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    def get_blurred_image(self, cls_ids: str, img: Image) -> np.ndarray:
+    def get_blurred_image(self, cls_ids: str, img: Image, options) -> np.ndarray:
         img_loaded = cv2.imread(img.get_path(Version.ORIG))[:, :, ::-1]
         for cls_id in cls_ids:
-            img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], Censor.blur)
+            img_loaded = apply_censorship(img_loaded, self.analyze_or_from_cache(cls_id, img)[-1], **options[cls_id])
         return img_loaded
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> list[Results]:

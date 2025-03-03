@@ -1,9 +1,10 @@
 from ultralytics.engine.results import Boxes, Results
 from copy import deepcopy
-from PIL import Image
+from PIL import Image, ImageColor
 from pathlib import Path
 from typing import Callable
 
+from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 import torch
@@ -107,9 +108,14 @@ class Censor:
         blurred_region = cv2.GaussianBlur(blurred_region, (kernel_size, kernel_size), 0)
         return blurred_region
 
-    def solid(color: tuple, **kwargs) -> np.ndarray: return color
+    def solid(color: tuple|str, **kwargs) -> np.ndarray:
+        if type(color) is str:
+            color = ImageColor.getcolor(color, "RGB")
+        return color
 
-    def overlay(image: np.ndarray, overlayImage: np.ndarray, **kwargs) -> np.ndarray:
+    def overlay(image: np.ndarray, overlayImage: np.ndarray|str, **kwargs) -> np.ndarray:
+        if type(overlayImage) is str:
+            overlayImage = cv2.imread(overlayImage)[:, :, ::-1]
         return cv2.resize(overlayImage, image.shape[:2][::-1])
 
 
@@ -139,7 +145,7 @@ def save_result_as_video(results: list[tuple[int, Results]], output_path: str, o
         except cv2.error: return False
 
     if valid_codec(codec) is False: raise ValueError("Invalid codec provided")
-    
+
     fps = round(cv2.VideoCapture(original_video_path).get(cv2.CAP_PROP_FPS))
     frame_size = results[0][1].orig_img.shape[:2][::-1]
     fourcc = cv2.VideoWriter_fourcc(*codec)
