@@ -281,14 +281,14 @@ class SettingsWindow(ft.AlertDialog):
                         ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, name=model_name: self.delete_model(name))
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Container(
-                        content=ft.Column([
+                        content=ft.Row([
                             ft.Container(
                                 content=ft.Text(f"{elem}"),
                                 padding=ft.padding.all(5),
                                 bgcolor=self.colors.background,
                                 border_radius=5
                             ) for elem in elements
-                        ], spacing=5),
+                        ], spacing=5, wrap=True),
                         visible=is_expanded,
                         padding=ft.padding.only(left=20)
                     )
