@@ -1,5 +1,8 @@
 import flet as ft
+from .color_picker.color_picker import ColorPicker
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
+import os
+from safe_video.number_plate_recognition import Censor
 
 
 class PreviewImage(ft.Stack):
@@ -64,9 +67,112 @@ class VideoPlayer(ft.Video):
             muted=False,
         )
 
+class ColorPickerWindow(ft.AlertDialog):
+    def __init__(self, initial_color, color_callback):
+        self.color_picker = ColorPicker(initial_color) if initial_color else ColorPicker()
+        def pick_color(info):
+            color_callback(self.color_picker.color)
+            self.page.close(self)
+        super().__init__(
+            title=ft.Text('Pick a color'),
+            content=self.color_picker,
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self.page.close(self)),
+                ft.TextButton("Pick Color", on_click=pick_color),
+            ]
+        )
+class ModelTileTextStyle(ft.TextStyle):
+    def __init__(self):
+        super().__init__(weight=ft.FontWeight.W_500)
+class ModelTileButton(ft.OutlinedButton):
+    def __init__(self, colors: ColorPalette, text, on_click, key=None):
+        super().__init__(
+            content=ft.Text(text, color=colors.text, style=ModelTileTextStyle()),
+            on_click=on_click,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, colors.text), padding=10),
+            key=key),
+class ModelTileIconButton(ft.IconButton):
+    def __init__(self, colors: ColorPalette, icon, on_click, icon_color=None):
+        super().__init__(
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, colors.text)),
+            icon=icon,
+            height=45,
+            width=45,
+            on_click=on_click,
+            icon_color=icon_color if icon_color else colors.text
+        )
+
+class CensorOptions(ft.Row):
+    def __init__(self, page: ft.Page, colors: ColorPalette, update_func):
+        self.main_page = page
+        self.update_func = update_func
+        str_options = ['blur', 'solid color', 'image']
+        dropdown_options = [ft.dropdown.Option(s) for s in str_options]
+        self.color = "#000000"
+        self.option = str_options[0]
+        self.file_path = None
+        self.colors = colors
+        self.file_picker = ft.FilePicker(on_result=self.get_path)
+        self.main_page.overlay.append(self.file_picker)
+        super().__init__(controls=[ft.Dropdown(
+                value=self.option,
+                options=dropdown_options,
+                width=130,
+                color=colors.text,
+                border_color=colors.text,
+                border_width=1,
+                border_radius=10,
+                focused_color=colors.text,
+                height=45,
+                padding=0,
+                text_style=ModelTileTextStyle(),
+                on_change=self.change_option)
+            ]
+        )
+
+    def change_option(self, info: ft.ControlEvent):
+        self.option = info.data
+        match info.data:
+            case 'solid color':
+                self.add_extra_button(ModelTileIconButton(self.colors, icon=ft.icons.RECTANGLE, icon_color=self.color,
+                    on_click=lambda _: self.main_page.open(ColorPickerWindow(self.color, self.pick_color))))
+            case 'image':
+                self.add_extra_button(ModelTileIconButton(self.colors, icon=ft.icons.FOLDER, icon_color=None if self.file_path else ft.colors.RED_500,
+                    on_click=lambda _: self.file_picker.pick_files("Pick file to censor", allow_multiple=False)))
+            case _:
+                if len(self.controls) >= 1:
+                    del self.controls[1]
+                    self.update_func()
+
+    def pick_color(self, color: str):
+        self.color = color
+        self.add_extra_button(ModelTileIconButton(self.colors, icon=ft.icons.RECTANGLE, icon_color=self.color,
+            on_click=lambda _: self.main_page.open(ColorPickerWindow(self.color, self.pick_color))))
+
+    def get_path(self, event: ft.FilePickerResultEvent):
+        if event.files is None or len(event.files) == 0: return
+        self.file_path = event.files[0].path
+        self.add_extra_button(ModelTileIconButton(self.colors, icon=ft.icons.FOLDER, icon_color=None if self.file_path else ft.colors.RED_500,
+            on_click=lambda _: self.file_picker.pick_files("Pick file to censor", allow_multiple=False)))
+
+    def add_extra_button(self, button: ft.Control):
+        if len(self.controls) <= 1:
+            self.controls.append(button)
+        else: self.controls[1] = button
+        self.update_func()
+
+    def get_option(self):
+        match self.option:
+            case 'solid color':
+                return {'action': Censor.solid, 'color': self.color}
+            case 'image':
+                if (self.file_path is None) or (not os.path.exists(self.file_path)): return {'action': Censor.solid, 'color': '#000000'} # just sensor with a black box if no image is provided
+                return {'action': Censor.overlay, 'overlayImage': self.file_path}
+        return {'action': Censor.blur }
+
 
 class ModelTile(ft.ExpansionTile):
-    def __init__(self, name, open_closed: dict, active: dict, colors: ColorPalette, active_callback, boundingBox_callback, blur_callback, edit_callback, delete_callback):
+    def __init__(self, name, open_closed: dict, censor_options: dict[str, CensorOptions], active: dict, colors: ColorPalette, active_callback, boundingBox_callback, blur_callback, edit_callback, delete_callback):
         def open_close_callback(info):
             open_closed[info.control.key] = info.data
         super().__init__(
@@ -75,28 +181,23 @@ class ModelTile(ft.ExpansionTile):
             maintain_state=True,
             key=name,
             leading=ft.Checkbox(on_change=active_callback, value=active[name], key=name),
-            shape=ft.StadiumBorder(),
-            expanded_cross_axis_alignment=ft.CrossAxisAlignment.START,
-            controls_padding=5,
+            bgcolor=colors.light,
+            shape=ft.BeveledRectangleBorder(0),
+            controls_padding=0,
             on_change=open_close_callback,
-            controls=[ft.Row([
-                ft.Column([], width=30),
+            controls=[ft.Container(ft.Row([
                 ft.Container(ft.Column([
-                    ft.OutlinedButton(
-                        content=ft.Column([ft.Text("show bounding boxes", color=colors.text)]),
-                        on_click=boundingBox_callback,
-                        key=name),
-                    ft.OutlinedButton(
-                        content=ft.Column([ft.Text("blur image", color=colors.text)]),
-                        on_click=blur_callback,
-                        key=name),
+                    censor_options[name],
+                    ModelTileButton(colors, "show bounding boxes", on_click=boundingBox_callback, key=name),
+                    ModelTileButton(colors, "censor", on_click=blur_callback, key=name),
                 ])),
+                ft.Column([], expand=True),
                 ft.Container(ft.Column([
                     ft.IconButton(icon=ft.icons.EDIT, icon_color=colors.text, on_click=edit_callback, key=name),
                     ft.IconButton(icon=ft.icons.DELETE, icon_color=ft.colors.RED_500,
-                                  on_click=delete_callback, key=name)
-                ]), bgcolor=colors.background, border_radius=10),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER)])
+                                  on_click=delete_callback, key=name),
+                ]), bgcolor=colors.normal, border_radius=10),
+            ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=0), padding=ft.Padding(left=40, top=5, right=15, bottom=10))])
 
 
 class ClassDropdown(ft.Dropdown):
