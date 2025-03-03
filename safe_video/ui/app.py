@@ -1,7 +1,7 @@
 import flet as ft
 from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette, Version
-from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow
+from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow, CensorOptions
 from .helper_classes import FileManger, ModelManager
 from flet.matplotlib_chart import MatplotlibChart
 import base64
@@ -10,6 +10,7 @@ DarkColors = ColorPalette(
     normal="#1a1e26",
     background="#232833",
     dark="#101217",
+    light="#21252f",
     selected='#2b84ff',
     text='#aec1eb'
 )
@@ -27,6 +28,7 @@ class UI_App:
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
+        self.tiles_censor_options = {cls: None for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
         self.show_censored = True
 
@@ -108,7 +110,8 @@ class UI_App:
         self.update()
 
     def blur_img(self, img: Image, cls_ids: list[str]):
-        censored_img = self.model_manager.get_blurred_image(cls_ids, img)
+        options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
+        censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
         self.file_manager.create_blurred_imgs(img.id, censored_img)
 
     def blur_current_img_callback(self, cls_id):
@@ -146,20 +149,20 @@ class UI_App:
                     self.tiles_open_closed[id] = open_closed
                 self.update()
             self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), edit_class,
-                           self.colors, (info.control.key, self.model_manager.cls[info.control.key])))
+                        self.colors, (info.control.key, self.model_manager.cls[info.control.key])))
 
         def delete_callback(info):
             self.model_manager.delete_cls(info.control.key)
             del self.tiles_open_closed[info.control.key]
             self.update()
         self.tiles.controls = [
-            ModelTile(c, self.tiles_open_closed, self.model_manager.active, self.colors,
-                      active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
-                      boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
-                      blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
-                      edit_callback=edit_callback,
-                      delete_callback=delete_callback
-                      ) for c in self.model_manager.cls.keys()]
+            ModelTile(c, self.tiles_open_closed, self.tiles_censor_options, self.model_manager.active, self.colors,
+                    active_callback=lambda info: self.model_manager.toggle_active(info.control.key),
+                    boundingBox_callback=lambda info: self.show_bounding_boxes(info.control.key),
+                    blur_callback=lambda info: self.blur_current_img_callback(info.control.key),
+                    edit_callback=edit_callback,
+                    delete_callback=delete_callback,
+                    ) for c in self.model_manager.cls.keys()]
         self.page.update()
 
     def update_media_container_with_img(self):
@@ -176,6 +179,7 @@ class UI_App:
         # page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
+        self.tiles_censor_options = {cls: CensorOptions(page, self.colors, self.update) for cls in self.model_manager.cls.keys()}
         page.add(
             ft.Container(ft.Row([
                 ft.Container(content=ft.IconButton(ft.icons.BLUR_ON, focus_color=self.colors.dark), width=50),
@@ -188,7 +192,7 @@ class UI_App:
                 ft.ElevatedButton("Close file", color=self.colors.text,
                                   on_click=self.close_callback, icon=ft.icons.DELETE),
                 ft.VerticalDivider(width=9, thickness=1, color=self.colors.background),
-                ft.ElevatedButton("Blur all", color=self.colors.text,
+                ft.ElevatedButton("Censor all", color=self.colors.text,
                                   on_click=lambda _: self.blur_all_callback(), icon=ft.icons.PLAY_ARROW),
                 ft.Switch(active_color=self.colors.text, value=True, on_change=self.toggle_blur_orig),
                 ft.Row([], expand=True),
