@@ -1,5 +1,5 @@
 import flet as ft
-from flet_contrib.color_picker import ColorPicker
+from .color_picker.color_picker import ColorPicker
 from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
 import os
 from safe_video.number_plate_recognition import Censor
