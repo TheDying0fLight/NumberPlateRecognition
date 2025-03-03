@@ -1,7 +1,7 @@
 import flet as ft
 from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette, Version
-from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow
+from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow, SettingsWindow
 from .helper_classes import FileManger, ModelManager
 from flet.matplotlib_chart import MatplotlibChart
 import base64
@@ -26,6 +26,7 @@ class UI_App:
         self.selected_media: str = None
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
+        self.file_picker_import_models = ft.FilePicker(on_result=self.add_new_model)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
         self.show_censored = True
@@ -134,7 +135,11 @@ class UI_App:
         self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
     def settings_callback(self, info: ft.ControlEvent):
-        print('TODO: Settings')
+        self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model, file_picker=self.file_picker_import_models))
+
+    def add_new_model(self, file_results: ft.FilePickerResultEvent):
+        self.model_manager.detection.add_model(file_results.files[0].path)
+        self.update()
 
     def update(self):
         def edit_callback(info):
@@ -176,6 +181,7 @@ class UI_App:
         # page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
+        page.overlay.append(self.file_picker_import_models)
         page.add(
             ft.Container(ft.Row([
                 ft.Container(content=ft.IconButton(ft.icons.BLUR_ON, focus_color=self.colors.dark), width=50),
