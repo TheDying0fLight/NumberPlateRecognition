@@ -80,5 +80,6 @@ class ColorPalette:
     background: str
     dark: str
     light: str
+    light_accent: str
     selected: str
     text: str
