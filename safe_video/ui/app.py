@@ -112,16 +112,16 @@ class UI_App:
             b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
             self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
             self.update()
-        except:
-            self.error_popup("No classes found for any model")
+        except Exception as e:
+            self.error_popup(str(e))
 
     def blur_img(self, img: Image, cls_ids: list[str]):
         try:
             options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
             censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
             self.file_manager.create_blurred_imgs(img.id, censored_img)
-        except:
-            self.error_popup("No classes found for any model")
+        except Exception as e:
+            self.error_popup(str(e))
 
     def error_popup(self, error_msg: str):
         self.page.open(ft.SnackBar(ft.Text(error_msg, color="white"), bgcolor=ft.colors.RED_500))
