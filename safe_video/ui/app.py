@@ -21,7 +21,7 @@ class UI_App:
     def __init__(self):
         self.colors: ColorPalette = DarkColors
         self.file_manager = FileManger(self.colors)
-        self.model_manager = ModelManager(self.show_bounding_boxes)
+        self.model_manager = ModelManager(self.show_bounding_boxes, self.error_popup)
         self.page: ft.Page = None
         self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
@@ -113,13 +113,12 @@ class UI_App:
         self.update()
 
     def blur_img(self, img: Image, cls_ids: list[str]):
-        try:
-            options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
-            censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
-            self.file_manager.create_blurred_imgs(img.id, censored_img)
-        except ValueError:
-            self.page.open(ft.SnackBar(ft.Text("No classes found for any model", color="white"), bgcolor=ft.colors.RED_500))
-            return
+        options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
+        censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
+        self.file_manager.create_blurred_imgs(img.id, censored_img)
+
+    def error_popup(self, error_msg: str):
+        self.page.open(ft.SnackBar(ft.Text(error_msg, color="white"), bgcolor=ft.colors.RED_500))
 
     def blur_current_img_callback(self, cls_id):
         self.blur_img(self.file_manager[self.selected_media], [cls_id])

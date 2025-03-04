@@ -15,7 +15,7 @@ from safe_video.number_plate_recognition import ObjectDetection, Censor, apply_c
 from ultralytics.engine.results import Results
 
 class ModelManager():
-    def __init__(self, bounding_box_func):
+    def __init__(self, bounding_box_func, error_func):
         self.detection: ObjectDetection = ObjectDetection()
         self.cls_file_path = 'safe_video/upload_cache/cls_file.pkl'
         self.cls = {}
@@ -25,6 +25,7 @@ class ModelManager():
         self.active: dict[str, bool] = {c: True for c in self.cls.keys()}
         self.results: dict[str, dict[str, Results]] = dict() # dict[cls_id][img_id]
         self.bounding_box_func = bounding_box_func
+        self.error_func = error_func
 
     def toggle_active(self, cls_id):
         self.active[cls_id] = not self.active[cls_id]
@@ -81,6 +82,9 @@ class ModelManager():
         return img_loaded
 
     def analyze_or_from_cache(self, cls_id, img: Image) -> list[Results]:
+        if not all((cls in self.detection.get_classes()) for layer in self.cls[cls_id] for cls in layer):
+            self.error_func("No classes found for any model")
+            return
         if cls_id not in self.results:
             self.results[cls_id] = dict()
         if img.id not in self.results[cls_id]:
