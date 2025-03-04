@@ -119,6 +119,7 @@ class UI_App:
 
     def error_popup(self, error_msg: str):
         self.page.open(ft.SnackBar(ft.Text(error_msg, color="white"), bgcolor=ft.colors.RED_500))
+        self.update()
 
     def blur_current_img_callback(self, cls_id):
         self.blur_img(self.file_manager[self.selected_media], [cls_id])
