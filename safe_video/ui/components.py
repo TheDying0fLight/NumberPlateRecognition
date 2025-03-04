@@ -124,7 +124,6 @@ class CensorOptions(ft.Row):
                 border_width=1,
                 border_radius=10,
                 focused_color=colors.text,
-                height=45,
                 padding=0,
                 text_style=ModelTileTextStyle(),
                 on_change=self.change_option)
