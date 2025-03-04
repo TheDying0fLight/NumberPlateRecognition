@@ -5,6 +5,7 @@ from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, A
 from .helper_classes import FileManger, ModelManager
 from flet.matplotlib_chart import MatplotlibChart
 import base64
+import pickle
 
 DarkColors = ColorPalette(
     normal="#1a1e26",
@@ -27,11 +28,11 @@ class UI_App:
         self.selected_media: str = None
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
-        self.file_picker_import_models = ft.FilePicker(on_result=self.add_new_model)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
         self.tiles_censor_options = {cls: None for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
         self.show_censored = True
+        self.models_path = 'safe_video/upload_cache/models.pkl'
 
     def upload_callback(self, file_results: ft.FilePickerResultEvent):
         if file_results.files is None or len(file_results.files) == 0: return
@@ -106,14 +107,24 @@ class UI_App:
             ))
 
     def show_bounding_boxes(self, model_id):
-        b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
-        self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
-        self.update()
+        try:
+            b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
+            self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
+            self.update()
+        except Exception as e:
+            self.error_popup(str(e))
 
     def blur_img(self, img: Image, cls_ids: list[str]):
-        options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
-        censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
-        self.file_manager.create_blurred_imgs(img.id, censored_img)
+        try:
+            options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
+            censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
+            self.file_manager.create_blurred_imgs(img.id, censored_img)
+        except Exception as e:
+            self.error_popup(str(e))
+
+    def error_popup(self, error_msg: str):
+        self.page.open(ft.SnackBar(ft.Text(error_msg, color="white"), bgcolor=ft.colors.RED_500))
+        self.update()
 
     def blur_current_img_callback(self, cls_id):
         self.blur_img(self.file_manager[self.selected_media], [cls_id])
@@ -139,14 +150,38 @@ class UI_App:
         self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
     def settings_callback(self, info: ft.ControlEvent):
-        self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model,
-                                      model_callback=self.model_manager.detection.get_names_with_classes,
-                                      del_callback=self.model_manager.detection.del_model,
-                                      file_picker=self.file_picker_import_models))
+        self.page.open(SettingsWindow(
+            self.page,
+            self.colors, load_callback=self.add_new_model,
+            model_callback=self.model_manager.detection.get_names_with_classes,
+            del_callback=self.del_model))
 
-    def add_new_model(self, file_results: ft.FilePickerResultEvent):
-        self.model_manager.detection.add_model(file_results.files[0].path)
+    def add_new_model(self, path: str):
+        self.model_manager.detection.add_model(path)
+        def update_model_path(path):
+            try:
+                with open(self.models_path, 'rb') as models_file:
+                    models = pickle.load(models_file)
+            except FileNotFoundError:
+                models = []
+            models.append(path)
+            with open(self.models_path, 'wb') as file:
+                pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
+        update_model_path(path)
         self.update()
+
+    def del_model(self, model_name: str):
+        try:
+            with open(self.models_path, 'rb') as models_file:
+                models = pickle.load(models_file)
+        except FileNotFoundError:
+            models = []
+        for model in self.model_manager.detection.models:
+            if model.model_name in models:
+                models.remove(model.model_name)
+        with open(self.models_path, 'wb') as file:
+            pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
+        self.model_manager.detection.del_model(model_name)
 
     def update(self):
         def edit_callback(info):
@@ -187,7 +222,6 @@ class UI_App:
         # page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
-        page.overlay.append(self.file_picker_import_models)
         self.tiles_censor_options = {cls: CensorOptions(page, self.colors, self.update) for cls in self.model_manager.cls.keys()}
         page.add(
             ft.Container(ft.Row([
@@ -223,6 +257,16 @@ class UI_App:
         )
         names = self.file_manager.load_cached()
         self.load_images(names)
+        try:
+            with open(self.models_path, 'rb') as models_file:
+                models = pickle.load(models_file)
+        except FileNotFoundError:
+            models = []
+        for model in models:
+            try:
+                self.model_manager.detection.add_model(model)
+            except:
+                pass
         self.update()
 
     def run(self):

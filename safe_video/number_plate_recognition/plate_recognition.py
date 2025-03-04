@@ -64,7 +64,7 @@ class ObjectDetection():
             else: continue
             break
         if len(classes) > 0: print(f"Could not find models for the following classes: {classes}")
-        if len(classes) == classes_len: raise ValueError("No classes found for any model")
+        if len(classes) == classes_len: raise ValueError(f"The classes: {classes} could not be found in any model")
         return model_class_dict
 
     def detect_objects(self, image: ImageInput, model_class_dict: dict[int, list[int]], conf_thresh: float = 0.25, augment: bool = False, verbose: bool = False) -> Results:
