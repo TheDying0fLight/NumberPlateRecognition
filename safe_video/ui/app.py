@@ -21,7 +21,7 @@ class UI_App:
     def __init__(self):
         self.colors: ColorPalette = DarkColors
         self.file_manager = FileManger(self.colors)
-        self.model_manager = ModelManager(self.show_bounding_boxes, self.error_popup)
+        self.model_manager = ModelManager(self.show_bounding_boxes)
         self.page: ft.Page = None
         self.media_container = ft.Container(expand=True, image_fit=ft.ImageFit.CONTAIN, margin=10)
         self.preview_bar = ft.ListView([], expand=True, spacing=10)
@@ -108,14 +108,20 @@ class UI_App:
             ))
 
     def show_bounding_boxes(self, model_id):
-        b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
-        self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
-        self.update()
+        try:
+            b64 = self.model_manager.get_bounding_box_image(model_id, self.file_manager[self.selected_media])
+            self.media_container.content = ft.Image(src_base64=b64, fit=ft.ImageFit.CONTAIN)
+            self.update()
+        except:
+            self.error_popup("No classes found for any model")
 
     def blur_img(self, img: Image, cls_ids: list[str]):
-        options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
-        censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
-        self.file_manager.create_blurred_imgs(img.id, censored_img)
+        try:
+            options = {id: self.tiles_censor_options[id].get_option() for id in cls_ids}
+            censored_img = self.model_manager.get_blurred_image(cls_ids, img, options)
+            self.file_manager.create_blurred_imgs(img.id, censored_img)
+        except:
+            self.error_popup("No classes found for any model")
 
     def error_popup(self, error_msg: str):
         self.page.open(ft.SnackBar(ft.Text(error_msg, color="white"), bgcolor=ft.colors.RED_500))
