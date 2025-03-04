@@ -28,7 +28,6 @@ class UI_App:
         self.selected_media: str = None
         self.file_picker_open = ft.FilePicker(on_result=self.upload_callback)
         self.file_picker_export = ft.FilePicker(on_result=self.export_callback)
-        self.file_picker_import_models = ft.FilePicker(on_result=self.add_new_model)
         self.tiles_open_closed = {cls: False for cls in self.model_manager.cls.keys()}
         self.tiles_censor_options = {cls: None for cls in self.model_manager.cls.keys()}
         self.tiles: ft.ListView = ft.ListView([], expand=True)
@@ -151,13 +150,14 @@ class UI_App:
         self.page.open(AddClassWindow(self.model_manager.get_possible_cls(), add_class, self.colors))
 
     def settings_callback(self, info: ft.ControlEvent):
-        self.page.open(SettingsWindow(self.colors, load_callback=self.add_new_model,
-                                      model_callback=self.model_manager.detection.get_names_with_classes,
-                                      del_callback=self.del_model,
-                                      file_picker=self.file_picker_import_models))
+        self.page.open(SettingsWindow(
+            self.page,
+            self.colors, load_callback=self.add_new_model,
+            model_callback=self.model_manager.detection.get_names_with_classes,
+            del_callback=self.del_model))
 
-    def add_new_model(self, file_results: ft.FilePickerResultEvent):
-        self.model_manager.detection.add_model(file_results.files[0].path)
+    def add_new_model(self, path: str):
+        self.model_manager.detection.add_model(path)
         def update_model_path(path):
             try:
                 with open(self.models_path, 'rb') as models_file:
@@ -167,7 +167,7 @@ class UI_App:
             models.append(path)
             with open(self.models_path, 'wb') as file:
                 pickle.dump(models, file, protocol=pickle.HIGHEST_PROTOCOL)
-        update_model_path(file_results.files[0].path)
+        update_model_path(path)
         self.update()
 
     def del_model(self, model_name: str):
@@ -222,7 +222,6 @@ class UI_App:
         # page.on_keyboard_event = lambda e: print(e)
         page.overlay.append(self.file_picker_open)
         page.overlay.append(self.file_picker_export)
-        page.overlay.append(self.file_picker_import_models)
         self.tiles_censor_options = {cls: CensorOptions(page, self.colors, self.update) for cls in self.model_manager.cls.keys()}
         page.add(
             ft.Container(ft.Row([

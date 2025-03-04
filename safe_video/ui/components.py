@@ -313,7 +313,8 @@ class AddClassWindow(ft.AlertDialog):
 
 
 class SettingsWindow(ft.AlertDialog):
-    def __init__(self, colors: ColorPalette, load_callback, model_callback, del_callback, file_picker):
+    def __init__(self, page, colors: ColorPalette, load_callback, model_callback, del_callback):
+        self.main_page = page
         self.colors = colors
         self.error_text = ft.Text('', color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
         self.callback = load_callback
@@ -322,6 +323,8 @@ class SettingsWindow(ft.AlertDialog):
         self.models = []
         self.model_list = ft.Column()
         self.expanded_models = {}
+        self.file_picker = ft.FilePicker(on_result=self.add_model)
+        self.main_page.overlay.append(self.file_picker)
         super().__init__(
             modal=False,
             title=ft.Text("Options", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
@@ -331,11 +334,7 @@ class SettingsWindow(ft.AlertDialog):
                     ft.TextButton(
                         'Add new model',
                         icon=ft.icons.ADD,
-                        on_click=lambda _: file_picker.pick_files(
-                            file_type=ft.FilePickerFileType.CUSTOM,
-                            allowed_extensions=['pt'],
-                            allow_multiple=True
-                        ),
+                        on_click=self.open_file_picker,
                     ),
                     self.error_text,
                     ft.Text("Models:", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
@@ -348,7 +347,6 @@ class SettingsWindow(ft.AlertDialog):
                 alignment=ft.alignment.center
             ),
             actions=[
-                ft.TextButton("Reload", on_click=lambda _: self.update_category_list()),
                 ft.TextButton("Close", on_click=lambda _: self.page.close(self)),
             ]
         )
@@ -362,8 +360,15 @@ class SettingsWindow(ft.AlertDialog):
         self.del_callback(model_name)
         self.update_category_list()
 
-    def add_model(self, file_results: ft.FilePickerResultEvent):
-        self.callback(file_results.path)
+    def open_file_picker(self, info):
+        self.file_picker.pick_files(
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=['pt'],
+            allow_multiple=True)
+
+    def add_model(self, file_picker_event: ft.FilePickerResultEvent):
+        if file_picker_event.files is None or len(file_picker_event.files) == 0: return
+        self.callback(file_picker_event.files[0].path)
         self.update_category_list()
 
     def update_category_list(self, init=False):
