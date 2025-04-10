@@ -4,7 +4,6 @@ from PIL import Image, ImageColor
 from pathlib import Path
 from typing import Callable
 
-from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 import torch
