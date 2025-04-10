@@ -1,5 +1,4 @@
 from .utils import *
-from IPython.display import clear_output
 import os
 from ultralytics import YOLO
 import cv2
