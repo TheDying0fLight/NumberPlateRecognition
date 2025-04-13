@@ -2,6 +2,11 @@
 
 This projects aims to create a program to make images and videos safe to upload under strict data protection laws.
 
+Start the UI by installing the conda environment and executing the module:
+```
+conda env create --name NumberPlateRecognition --file=environment.yml
+python -m safe_video
+```
 # Developer Information
 
 ## Rules
