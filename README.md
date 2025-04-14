@@ -7,6 +7,15 @@ Start the UI by installing the conda environment and executing the module:
 conda env create --name NumberPlateRecognition --file=environment.yml
 python -m safe_video
 ```
+Useful examples for working with the package can be found in the Jupyter Notebook [`test.ipynb`](https://github.com/Cari1111/NumberPlateRecognition/blob/main/test.ipynb)
+
+## Models
+
+- YOLO standard model: is imported automatically
+- License_Plate model: is imported automatically (from [`/models/first10ktrain/weights/licensePlate.pt`](https://github.com/Cari1111/NumberPlateRecognition/blob/main/models/first10ktrain/weights/licensePlate.pt))
+- face model: best performing model can be imported from [`/models/face_recognition/weights/best.pt`](https://github.com/Cari1111/NumberPlateRecognition/blob/main/models/face_recognition/weights/best.pt)
+- text recognition model: best performing model can be imported from [`/models/text/weights/text.pt`](https://github.com/Cari1111/NumberPlateRecognition/blob/main/models/text/weights/text.pt)
+
 # Developer Information
 
 ## Rules
@@ -31,7 +40,7 @@ To update your conda environment with the new file use:
 conda env update --file environment.yml --prune
 ```
 
-# Resources
+# Further Resources
 
 ## Datasets
 - [UltralyticsYOLODocs](https://docs.ultralytics.com/datasets/detect/#usage)
