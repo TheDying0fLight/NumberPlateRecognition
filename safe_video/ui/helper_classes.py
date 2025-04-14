@@ -2,16 +2,14 @@ import os
 import shutil
 import re
 import PIL
-import warnings
 import cv2
 import pickle
 import numpy as np
 import base64
 import io
 
-from .dataclasses import Image, Video, Media, FileVersion, FileVersionTemplate, ColorPalette, Version
-from .components import ModelTile
-from safe_video.number_plate_recognition import ObjectDetection, Censor, apply_censorship, merge_results_list
+from .dataclasses import Image, Video, Media, ColorPalette, Version
+from safe_video.number_plate_recognition import ObjectDetection, apply_censorship, merge_results_list
 from ultralytics.engine.results import Results
 
 class ModelManager():

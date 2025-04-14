@@ -129,7 +129,7 @@ class ObjectDetection():
             result = None
             for model_idx, class_indices in class_dict.items():
                 if len(class_indices) == 0: continue
-                detection_results = self.models[model_idx](image, imgsz=(min(image.shape[0], 4000), min(image.shape[1], 4000)),
+                detection_results = self.models[model_idx](crp_img, imgsz=(min(crp_img.shape[0], 4000), min(crp_img.shape[1], 4000)),
                                                            classes=class_indices, conf=conf_thresh, augment=augment, half=True)[0].cpu().numpy()
                 if result is None: result = detection_results
                 else: result = merge_results(result, detection_results)
