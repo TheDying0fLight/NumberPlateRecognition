@@ -1,9 +1,7 @@
 import flet as ft
-from safe_video.number_plate_recognition import ObjectDetection
 from .dataclasses import Video, Image, ColorPalette, Version
 from .components import PreviewImage, AlertSaveWindow, VideoPlayer, ModelTile, AddClassWindow, CensorOptions, SettingsWindow
 from .helper_classes import FileManger, ModelManager
-from flet.matplotlib_chart import MatplotlibChart
 import base64
 import pickle
 
