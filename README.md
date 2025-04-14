@@ -42,7 +42,7 @@ conda env update --file environment.yml --prune
 
 # Further Resources
 
-## Datasets
+## Datasets for potential creation of additional models
 - [UltralyticsYOLODocs](https://docs.ultralytics.com/datasets/detect/#usage)
 - [PapersWithCode](https://paperswithcode.com/datasets?task=object-detection&mod=images&page=1)
 - [Kaggle](https://www.kaggle.com/datasets?tags=13207-Computer+Vision)
