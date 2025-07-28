@@ -9,6 +9,11 @@ python -m safe_video
 ```
 Useful examples for working with the package can be found in the Jupyter Notebook [`test.ipynb`](https://github.com/Cari1111/NumberPlateRecognition/blob/main/test.ipynb)
 
+## UI
+<img height="250" alt="main" src="https://github.com/user-attachments/assets/618b3891-0fab-438b-bbf8-dce026768c2c" />
+<img height="250" alt="add-pipeline" src="https://github.com/user-attachments/assets/416d2146-8c34-4301-9901-f44c203a2aa8" />
+<img height="250" alt="add-models" src="https://github.com/user-attachments/assets/2ed80399-473f-4824-a36e-3787c0f2ba97" />
+
 ## Models
 
 - YOLO standard model: is imported automatically
